@@ -31,6 +31,14 @@ Senza una riga `Tipo` valida, l'ambiente è trattato come produzione.
    pwsh -NoProfile -File tests/Invoke-OiLeakScan.ps1 -Path . -Allowlist tests/leakscan-allowlist.json
    ```
 3. Crea il tag `v<versione>` e, in ogni workspace, esegui `Update-OiWorkspace.ps1`.
+4. Nel workspace riallinea il plugin, poi riavvia Claude Code:
+   ```powershell
+   claude plugin marketplace add <owner>/oi-claude-toolkit@v<versione> --scope project
+   claude plugin update oi-toolkit@oi-claude-toolkit --scope project
+   ```
+   Il solo `plugin update` senza il primo comando è risultato non sufficiente con la versione 2.1.316 della CLI.
+
+Le regole rimosse da `settings.base.json` vanno tolte a mano dai workspace: l'aggiornamento aggiunge regole ma non ne rimuove.
 
 ## Licenze
 
