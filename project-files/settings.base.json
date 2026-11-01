@@ -12,7 +12,7 @@
     "ask": [
       "Bash(sqlcmd:*)",
       "Bash(git push:*)",
-      "Bash(Invoke-Safeguard*:*)",
+      "Bash(Invoke-Safeguard*)",
       "Bash(pwsh:*)",
       "Bash(powershell:*)"
     ]

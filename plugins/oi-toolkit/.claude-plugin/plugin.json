@@ -1,6 +1,6 @@
 {
   "name": "oi-toolkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Skills, agents and commands for One Identity Manager and Safeguard customization workspaces",
   "author": { "name": "Vladimir Atyasov" }
 }

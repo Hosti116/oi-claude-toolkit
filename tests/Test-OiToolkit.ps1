@@ -56,6 +56,11 @@ foreach ($name in 'target-probing', 'strategy-selection', 'script-authoring', 's
     Assert-True ($spp.Contains("vendor/SafeguardCustomPlatform/.agents/skills/$name/SKILL.md")) "spp: reads $name from the submodule"
 }
 
+# Permission rules: Claude Code takes a * before a trailing :* literally, so such a rule never matches
+$baseSettings = Get-Content -LiteralPath (Join-Path $toolkit 'project-files/settings.base.json') -Raw | ConvertFrom-Json
+$brokenRules = @(@($baseSettings.permissions.ask) + @($baseSettings.permissions.deny) | Where-Object { $_ -match '\*:\*\)$' })
+Assert-True ($brokenRules.Count -eq 0) "no rule mixes * with :* $($brokenRules -join ', ')"
+
 # Third-party attribution
 $notice = Get-Content -LiteralPath (Join-Path $toolkit 'NOTICE') -Raw
 Assert-True ($notice -match 'Affaan Mustafa') 'NOTICE credits ECC'
