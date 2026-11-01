@@ -105,10 +105,31 @@ function Sync-OiFile {
         [PSCustomObject]@{ Target = $entry.Target; Mode = $entry.Mode; Action = $action }
     }
     $orphans = foreach ($target in $lock.files.Keys) {
-        if (-not $newLock.ContainsKey($target)) { [PSCustomObject]@{ Target = $target; Mode = 'managed'; Action = 'NoLongerInToolkit' } }
+        if ($newLock.ContainsKey($target) -or -not (Test-Path -LiteralPath (Join-Path $WorkspaceRoot $target))) { continue }
+        # Stays in the lock until the file is gone, so every update keeps reporting it.
+        $newLock[$target] = $lock.files[$target]
+        [PSCustomObject]@{ Target = $target; Mode = 'managed'; Action = 'NoLongerInToolkit' }
     }
+    $ignore = Add-OiGitignoreEntry -ToolkitRoot $ToolkitRoot -WorkspaceRoot $WorkspaceRoot -DryRun:$DryRun
     if (-not $DryRun) { Write-OiLock -WorkspaceRoot $WorkspaceRoot -Version $info.Version -Files $newLock }
-    @($results) + @($orphans)
+    @($results) + @($orphans) + @($ignore)
+}
+
+function Add-OiGitignoreEntry {
+    # .gitignore belongs to the workspace, but the toolkit entries (secrets, tokens) must always be there.
+    param([string]$ToolkitRoot, [string]$WorkspaceRoot, [switch]$DryRun)
+    $path = Join-Path $WorkspaceRoot '.gitignore'
+    if (-not (Test-Path -LiteralPath $path)) { return }
+    $present = @(Get-Content -LiteralPath $path | ForEach-Object { $_.Trim() })
+    $required = @(Get-Content -LiteralPath (Join-Path $ToolkitRoot 'project-files/gitignore') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+    $missing = @($required | Where-Object { $_ -notin $present })
+    if (-not $missing) { return }
+    if (-not $DryRun) {
+        $existing = [IO.File]::ReadAllText($path)
+        $separator = if ($existing -and -not $existing.EndsWith("`n")) { "`n" } else { '' }
+        [IO.File]::WriteAllText($path, $existing + $separator + ($missing -join "`n") + "`n", $Utf8NoBom)
+    }
+    [PSCustomObject]@{ Target = '.gitignore'; Mode = 'seed'; Action = 'Update' }
 }
 
 function Merge-OiPermission {
@@ -116,10 +137,10 @@ function Merge-OiPermission {
     param([hashtable]$Base, [hashtable]$Existing)
     $merged = [ordered]@{}
     foreach ($key in @($Existing.Keys) + @($Base.Keys) | Select-Object -Unique) {
-        $hasBoth = $Base.ContainsKey($key) -and $Existing.ContainsKey($key)
-        $isList = $hasBoth -and $Base[$key] -is [array]
-        $merged[$key] = if ($isList) { @(@($Existing[$key]) + @($Base[$key]) | Select-Object -Unique) }
-        elseif ($Existing.ContainsKey($key)) { $Existing[$key] } else { $Base[$key] }
+        # Plain assignments: an if-expression would unroll the lists (one item becomes a string, empty becomes null).
+        if (-not $Existing.ContainsKey($key)) { $merged[$key] = $Base[$key]; continue }
+        if (-not ($Base.ContainsKey($key) -and $Base[$key] -is [array])) { $merged[$key] = $Existing[$key]; continue }
+        $merged[$key] = @(@($Existing[$key]) + @($Base[$key]) | Select-Object -Unique)
     }
     return $merged
 }

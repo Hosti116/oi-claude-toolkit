@@ -40,7 +40,12 @@ $ErrorActionPreference = 'Stop'
 
 if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path) }
 if (-not $SppSessionFile) { $SppSessionFile = Join-Path $RepoRoot '.sg-state/sg-session.json' }
-$oiEnv = & (Join-Path $PSScriptRoot 'Get-OiEnv.ps1') -RepoRoot $RepoRoot -Require 'Sql.Server', 'Sql.Database', 'Sql.User'
+$requiredSettings = @(
+    if (-not $SqlServer) { 'Sql.Server' }
+    if (-not $Database) { 'Sql.Database' }
+    if (-not $SqlUser) { 'Sql.User' }
+)
+$oiEnv = & (Join-Path $PSScriptRoot 'Get-OiEnv.ps1') -RepoRoot $RepoRoot -Require $requiredSettings
 if (-not $SqlServer) { $SqlServer = $oiEnv.Sql.Server }
 if (-not $Database) { $Database = $oiEnv.Sql.Database }
 if (-not $SqlUser) { $SqlUser = $oiEnv.Sql.User }

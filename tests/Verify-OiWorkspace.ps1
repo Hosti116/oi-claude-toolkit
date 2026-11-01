@@ -30,7 +30,8 @@ try {
     $settings = Get-Content -LiteralPath (Join-Path $ws '.claude/settings.json') -Raw | ConvertFrom-Json -AsHashtable
     Assert-True ($settings.enabledPlugins['oi-toolkit@oi-claude-toolkit'] -eq $true) 'plugin enabled'
     Assert-True ($settings.extraKnownMarketplaces['oi-claude-toolkit'].source.repo -eq $repo) 'marketplace repo written'
-    Assert-True ($settings.extraKnownMarketplaces['oi-claude-toolkit'].source.ref -eq 'v1.0.0') 'ref pinned to the toolkit version'
+    $version = (Get-OiToolkitInfo -ToolkitRoot $toolkit).Version
+    Assert-True ($settings.extraKnownMarketplaces['oi-claude-toolkit'].source.ref -eq "v$version") 'ref pinned to the toolkit version'
     Assert-True ($settings.permissions.deny -contains 'Read(./secrets/**)') 'deny rules present'
 
     $lab = Join-Path $temp 'lab'
@@ -73,6 +74,56 @@ try {
     Assert-True (-not (Test-Path (Join-Path $lab 'tools/Get-OiEnv.ps1'))) 'DryRun creates no file'
     Assert-True ((Get-OiContentHash (Join-Path $lab '.claude/settings.json')) -eq $before) 'DryRun keeps settings'
     Assert-True (@($dry | Where-Object { $_.Action -eq 'Create' }).Count -eq 1) 'DryRun reports the missing file'
+
+    # Lists keep their shape in the merge: one item stays a list, empty stays empty
+    $shapes = Get-OiMergedSettings -Base @{ permissions = @{ ask = @('c') } } `
+        -Existing @{ permissions = @{ allow = @('x'); additionalDirectories = @() } } `
+        -MarketplaceName 'm' -PluginId 'p@m' -Repo 'o/r' -Ref 'v1'
+    $shapesJson = $shapes | ConvertTo-Json -Depth 8 | ConvertFrom-Json -AsHashtable
+    Assert-True ($shapesJson.permissions.allow -is [array] -and $shapesJson.permissions.allow.Count -eq 1) 'one-item existing list stays a list'
+    Assert-True ($shapesJson.permissions.additionalDirectories -is [array]) 'empty list stays a list'
+    Assert-True ($shapesJson.permissions.ask -is [array] -and $shapesJson.permissions.ask.Count -eq 1) 'one-item base list stays a list'
+
+    # A deleted seed file comes back without placeholders and classified as production
+    $restored = Join-Path $temp 'restored'
+    & $newScript -Path $restored -MarketplaceRepo $repo -EnvironmentType LAB -SkipSubmodules 6>$null
+    Remove-Item -LiteralPath (Join-Path $restored 'CLAUDE.md')
+    $null = & $updateScript -Path $restored
+    $restoredClaude = Get-Content -LiteralPath (Join-Path $restored 'CLAUDE.md') -Raw
+    Assert-True ($restoredClaude -notmatch '__[A-Z_]+__') 'Update leaves no placeholder in a restored CLAUDE.md'
+    Assert-True ($restoredClaude -match 'Tipo: PRODUZIONE') 'restored CLAUDE.md is production'
+
+    # .gitignore: existing file keeps its lines and gains the required ones
+    $ignorePath = Join-Path $restored '.gitignore'
+    Set-Content -LiteralPath $ignorePath -Value 'my-entry'
+    $ignoreReport = @(& $updateScript -Path $restored)
+    $ignoreLines = @(Get-Content -LiteralPath $ignorePath)
+    Assert-True ($ignoreLines -contains 'my-entry' -and $ignoreLines -contains 'secrets/' -and $ignoreLines -contains '.sg-state/') 'required ignore entries added'
+    Assert-True (@($ignoreReport | Where-Object { $_.Target -eq '.gitignore' -and $_.Action -eq 'Update' }).Count -eq 1) 'ignore change reported'
+
+    # A file dropped from the toolkit keeps being reported until it is gone
+    $lockPath = Join-Path $restored '.oi-toolkit.lock.json'
+    $lockData = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json -AsHashtable
+    $lockData.files['tools/Old.ps1'] = 'abc'
+    $lockData | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $lockPath
+    Set-Content -LiteralPath (Join-Path $restored 'tools/Old.ps1') -Value 'old'
+    $first = @(& $updateScript -Path $restored)
+    $second = @(& $updateScript -Path $restored)
+    Assert-True (@($first | Where-Object Action -eq 'NoLongerInToolkit').Count -eq 1) 'orphan reported by the first update'
+    Assert-True (@($second | Where-Object Action -eq 'NoLongerInToolkit').Count -eq 1) 'orphan still reported by the second update'
+    Remove-Item -LiteralPath (Join-Path $restored 'tools/Old.ps1')
+    $third = @(& $updateScript -Path $restored)
+    Assert-True (@($third | Where-Object Action -eq 'NoLongerInToolkit').Count -eq 0) 'orphan forgotten once the file is gone'
+
+    # A failed marketplace lookup changes nothing
+    $noMarket = Join-Path $temp 'nomarket'
+    & $newScript -Path $noMarket -MarketplaceRepo $repo -SkipSubmodules 6>$null
+    Remove-Item -LiteralPath (Join-Path $noMarket '.claude/settings.json')
+    Remove-Item -LiteralPath (Join-Path $noMarket 'tools/Get-OiEnv.ps1')
+    $failed = $false
+    try { $null = & $updateScript -Path $noMarket } catch { $failed = $_.Exception.Message -match 'MarketplaceRepo' }
+    Assert-True $failed 'Update stops without a marketplace'
+    Assert-True (-not (Test-Path (Join-Path $noMarket 'tools/Get-OiEnv.ps1'))) 'stopped Update changed no file'
 
     # Decision table
     Assert-True ((Get-OiFileAction -Mode managed -WorkspaceHash '' -LockHash '' -SourceHash 'a') -eq 'Create') 'action: missing file'

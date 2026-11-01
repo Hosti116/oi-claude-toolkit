@@ -29,7 +29,10 @@ $root = (Resolve-Path -LiteralPath $Path).Path
 $info = Get-OiToolkitInfo -ToolkitRoot $PSScriptRoot
 if (-not $Ref) { $Ref = "v$($info.Version)" }
 
-$results = Sync-OiFile -ToolkitRoot $PSScriptRoot -WorkspaceRoot $root -DryRun:$DryRun
+# Settings first: a missing marketplace must stop the update before any file changes.
 $null = Update-OiSettingsFile -ToolkitRoot $PSScriptRoot -WorkspaceRoot $root -Repo $MarketplaceRepo -Ref $Ref -DryRun:$DryRun
+# A seed file recreated here gets the safe type: the original value is gone, and non-production must be declared.
+$tokens = @{ '__WORKSPACE_NAME__' = (Split-Path -Leaf $root); '__ENV_TYPE__' = 'PRODUZIONE' }
+$results = Sync-OiFile -ToolkitRoot $PSScriptRoot -WorkspaceRoot $root -Tokens $tokens -DryRun:$DryRun
 
 $results | Where-Object Action -in 'Create', 'Update', 'LocalChange', 'NoLongerInToolkit'

@@ -21,7 +21,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $Rules = @(
-    @{ Category = 'Secret'; Regex = '(?i)\b(password|passwd|pwd|secret|token|api[_-]?key)\s*[:=]\s*[''"][^''"\s$<{%]{6,}[''"]' }
+    @{ Category = 'Secret'; Regex = '(?i)(password|passwd|pwd|secret|token|api[_-]?key)[''"]?\s*[:=]\s*[''"][^''"\s$<{%]{6,}[''"]' }
     @{ Category = 'Secret'; Regex = '(?i)Password=[^;$\s"''<{`(]{4,}' }
     @{ Category = 'Secret'; Regex = '-----BEGIN [A-Z ]*PRIVATE KEY' }
     @{ Category = 'Secret'; Regex = '\b(ghp_[A-Za-z0-9]{20,}|github_pat_\w{20,}|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9-]{20,})\b' }
@@ -57,8 +57,16 @@ function Get-CustomerRule {
     foreach ($term in $terms) { @{ Category = 'Customer'; Regex = "(?i)$([regex]::Escape($term.Trim()))" } }
 }
 
+function Get-RepositoryFile([string]$Root) {
+    # A scan that read nothing must never look like a clean scan.
+    $files = @(git -C $Root ls-files --cached --others --exclude-standard)
+    if ($LASTEXITCODE -ne 0) { throw "git cannot read $Root (exit code $LASTEXITCODE): nothing was scanned." }
+    if (-not $files) { throw "No files found in ${Root}: nothing was scanned." }
+    return $files
+}
+
 function Get-WorkingTreeFinding([string]$Root, [object[]]$AllRules) {
-    foreach ($relative in @(git -C $Root ls-files --cached --others --exclude-standard)) {
+    foreach ($relative in Get-RepositoryFile $Root) {
         if (Test-Skipped $relative) { continue }
         $full = Join-Path $Root $relative
         if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
@@ -73,7 +81,11 @@ function Get-WorkingTreeFinding([string]$Root, [object[]]$AllRules) {
 
 function Get-HistoryFinding([string]$Root, [object[]]$AllRules) {
     $file = ''
-    foreach ($line in @(git -C $Root log --all -p --no-color --format= 2>$null)) {
+    $null = git -C $Root rev-parse --verify --quiet HEAD
+    if ($LASTEXITCODE -ne 0) { return }   # no commits yet: there is no history to read
+    $history = @(git -C $Root log --all -p --no-color --format=)
+    if ($LASTEXITCODE -ne 0) { throw "git log failed in $Root (exit code $LASTEXITCODE): history was not scanned." }
+    foreach ($line in $history) {
         if ($line -match '^\+\+\+ b/(.+)$') { $file = $Matches[1]; continue }
         if ($line -notmatch '^\+' -or (Test-Skipped $file)) { continue }
         Get-LineFinding 'history' $file 0 $line.Substring(1) $AllRules
