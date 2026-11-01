@@ -1,0 +1,66 @@
+Third-party notices
+
+The files below come from Everything Claude Code (ECC),
+https://github.com/affaan-m/everything-claude-code
+Copyright (c) 2026 Affaan Mustafa, MIT License: see THIRD_PARTY_LICENSES/ECC-MIT.txt.
+Compared with upstream commit b38be6a7f6350964d59328b52f0624e1d1d552d1.
+
+Identical to that commit:
+
+- plugins/oi-toolkit/agents/code-reviewer.md
+- plugins/oi-toolkit/agents/csharp-reviewer.md
+- plugins/oi-toolkit/agents/go-build-resolver.md
+- plugins/oi-toolkit/agents/go-reviewer.md
+- plugins/oi-toolkit/agents/planner.md
+- plugins/oi-toolkit/agents/python-reviewer.md
+- plugins/oi-toolkit/agents/security-reviewer.md
+- plugins/oi-toolkit/agents/silent-failure-hunter.md
+- plugins/oi-toolkit/commands/go-build.md
+- plugins/oi-toolkit/commands/go-review.md
+- plugins/oi-toolkit/commands/go-test.md
+- plugins/oi-toolkit/commands/learn.md
+- plugins/oi-toolkit/commands/plan.md
+- plugins/oi-toolkit/commands/resume-session.md
+- plugins/oi-toolkit/commands/save-session.md
+- plugins/oi-toolkit/commands/skill-create.md
+- project-files/rules/angular/coding-style.md
+- project-files/rules/angular/patterns.md
+- project-files/rules/angular/security.md
+- project-files/rules/angular/testing.md
+- project-files/rules/coding-style.md
+- project-files/rules/csharp/coding-style.md
+- project-files/rules/csharp/patterns.md
+- project-files/rules/csharp/security.md
+- project-files/rules/development-workflow.md
+- project-files/rules/git-workflow.md
+- project-files/rules/golang/coding-style.md
+- project-files/rules/golang/patterns.md
+- project-files/rules/golang/security.md
+- project-files/rules/golang/testing.md
+- project-files/rules/python/coding-style.md
+- project-files/rules/python/patterns.md
+- project-files/rules/python/security.md
+- project-files/rules/python/testing.md
+- project-files/rules/security.md
+- project-files/rules/testing.md
+- project-files/rules/typescript/coding-style.md
+- project-files/rules/typescript/patterns.md
+- project-files/rules/typescript/security.md
+- project-files/rules/typescript/testing.md
+- plugins/oi-toolkit/skills/api-connector-builder/SKILL.md
+- plugins/oi-toolkit/skills/api-design/SKILL.md
+- plugins/oi-toolkit/skills/architecture-decision-records/SKILL.md
+- plugins/oi-toolkit/skills/csharp-testing/SKILL.md
+- plugins/oi-toolkit/skills/dotnet-patterns/SKILL.md
+- plugins/oi-toolkit/skills/golang-testing/SKILL.md
+- plugins/oi-toolkit/skills/search-first/SKILL.md
+- plugins/oi-toolkit/skills/security-review/SKILL.md
+- plugins/oi-toolkit/skills/security-review/cloud-infrastructure-security.md
+
+Differing from that commit (changed here, or changed upstream since the copy):
+
+- plugins/oi-toolkit/agents/typescript-reviewer.md
+- plugins/oi-toolkit/commands/code-review.md
+- project-files/rules/csharp/testing.md
+- plugins/oi-toolkit/skills/golang-patterns/SKILL.md
+- plugins/oi-toolkit/skills/verification-loop/SKILL.md

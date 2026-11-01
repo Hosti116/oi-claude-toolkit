@@ -1,0 +1,16 @@
+site_name: __WORKSPACE_NAME__
+docs_dir: docs
+exclude_docs: |
+  reference/
+theme:
+  name: material
+  language: it
+  features: [navigation.instant, search.highlight, content.code.copy]
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

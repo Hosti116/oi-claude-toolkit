@@ -1,0 +1,21 @@
+[
+  {"path": "project-files/gitignore", "pattern": "settings[.]local", "reason": "Claude Code settings file name, not a host"},
+  {"path": "project-files/settings.base.json", "pattern": "settings[.]local", "reason": "Claude Code settings file name, not a host"},
+  {"path": "plugins/oi-toolkit/*", "pattern": "settings[.]local", "reason": "Claude Code settings file name, not a host"},
+  {"path": "project-files/oi-shared.md", "pattern": "Tipo: LAB", "reason": "environment type value in the production rule"},
+  {"path": "plugins/oi-toolkit/skills/*", "pattern": "Tipo: LAB", "reason": "environment type value in the production gate"},
+  {"path": "New-OiWorkspace.ps1", "pattern": "'LAB'", "reason": "allowed value of -EnvironmentType"},
+  {"path": "tests/*", "pattern": "([$]lab|EnvironmentType LAB|Tipo: LAB|'LAB')", "reason": "variable and value used by the tests"},
+  {"path": "plugins/oi-toolkit/agents/code-reviewer.md", "pattern": "sk-abc123", "reason": "ECC example of a bad practice, fake value"},
+  {"path": "plugins/oi-toolkit/skills/security-review/SKILL.md", "pattern": "sk-proj-xxxxx|password123", "reason": "ECC example of a bad practice, fake value"},
+  {"path": "project-files/rules/*/security.md", "pattern": "sk-(live|proj)-", "reason": "ECC example of a bad practice, fake value"},
+  {"path": "plugins/oi-toolkit/skills/oi-documentation/SKILL.md", "pattern": "customer data", "reason": "rule forbidding customer data"},
+  {"path": "project-files/docs-templates/README.md", "pattern": "dati di clienti", "reason": "rule forbidding customer data"},
+  {"path": "project-files/connectors/ServiceNowModule/ServiceNowTableApi.psm1", "pattern": "New-SnowProperty customer ", "reason": "standard ServiceNow field name"},
+  {"path": "plugins/oi-toolkit/agents/planner.md", "pattern": "customer[.]subscription", "reason": "Stripe event names in an ECC example"},
+  {"path": "plugins/oi-toolkit/skills/api-design/SKILL.md", "pattern": "customer[.](country|name)|eyJhbGciOiJIUzI1NiIs[.][.][.]", "reason": "generic API examples from ECC, truncated fake token"},
+  {"path": "plugins/oi-toolkit/skills/dotnet-patterns/SKILL.md", "pattern": "customer", "reason": "variable name in an ECC code example"},
+  {"path": "plugins/oi-toolkit/skills/oneidentity-im-posh/SKILL.md", "pattern": "FillDbWithFakeData", "reason": "upstream script file name"},
+  {"path": "plugins/oi-toolkit/skills/security-review/SKILL.md", "pattern": "[.]env[.]local", "reason": "file name, not a host"},
+  {"path": "plugins/oi-toolkit/skills/security-review/cloud-infrastructure-security.md", "pattern": "10[.]0[.]0[.]0/16", "reason": "generic CIDR in an ECC Terraform example"}
+]

@@ -1,0 +1,12 @@
+{
+  "name": "oi-claude-toolkit",
+  "description": "One Identity workspace toolkit for Claude Code",
+  "owner": { "name": "Vladimir Atyasov" },
+  "plugins": [
+    {
+      "name": "oi-toolkit",
+      "source": "./plugins/oi-toolkit",
+      "description": "Skills, agents and commands for One Identity Manager and Safeguard customization workspaces"
+    }
+  ]
+}

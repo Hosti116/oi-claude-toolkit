@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "deny": [
+      "Read(./secrets/**)",
+      "Read(./**/*.pfx)",
+      "Read(./**/*.key)",
+      "Read(./**/.env)",
+      "Read(./.sg-state/**)"
+    ],
+    "ask": [
+      "Bash(sqlcmd:*)",
+      "Bash(git push:*)",
+      "Bash(Invoke-Safeguard*:*)",
+      "Bash(pwsh:*)",
+      "Bash(powershell:*)"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+secrets/
+.env
+*.pfx
+*.p12
+*.key
+.claude/settings.local.json
+oim/transport/*.zip
+bin/
+obj/
+.vs/
+__pycache__/
+*.log
+.sg-state/
+spp/custom-platforms/*/logs/
