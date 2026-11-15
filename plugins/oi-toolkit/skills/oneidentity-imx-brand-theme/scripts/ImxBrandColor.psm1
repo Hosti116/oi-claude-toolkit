@@ -9,7 +9,7 @@ $script:DarkPage = '#1e1e1e'
 $script:MinAccentOnCard = 4.0
 $script:MinAccentOnPage = 4.5
 $script:MinWhiteOnFill = 7.0
-$script:MinTextAa = 4.5
+$script:MinLargeTextAa = 3.0
 
 # Share of the primary in the tints (mixed with white) and share of black in the shades.
 $script:Tints = [ordered]@{ '50' = 0.10; '100' = 0.25; '200' = 0.45; '300' = 0.65; '400' = 0.82 }
@@ -83,12 +83,12 @@ function Select-ImxDarkFill {
 }
 
 function Get-ImxOnColor {
-    <# Text color on a background: white when it reaches AA (4.5:1, as brand colors usually carry white text),
-       otherwise the one of white and black with the higher contrast. #>
+    <# Text/logo color on a brand surface (masthead, buttons: large text): white when it reaches AA for large text
+       (3:1), as brand colors usually carry white; otherwise the one of white and black with the higher contrast. #>
     [OutputType([string])]
     param([Parameter(Mandatory)][string] $Bg)
     $white = Get-ImxContrast '#ffffff' $Bg
-    if ($white -ge $script:MinTextAa -or $white -ge (Get-ImxContrast '#000000' $Bg)) { return '#ffffff' }
+    if ($white -ge $script:MinLargeTextAa -or $white -ge (Get-ImxContrast '#000000' $Bg)) { return '#ffffff' }
     return '#000000'
 }
 
