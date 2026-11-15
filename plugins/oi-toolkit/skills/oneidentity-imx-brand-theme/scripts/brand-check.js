@@ -4,8 +4,9 @@
 (() => {
   const OOB = /rgba?\((10, 150, 209|1, 107, 145|0, 78, 107|138, 203, 227|227, 106, 0)[,)]/;
   // Low-contrast texts of the standard One Identity theme itself (grey subtitles, decorative "no data" icon,
-  // disabled controls): reported by the standard theme too, not caused by the brand theme.
-  const STANDARD_LOW = /rgb\((145, 151, 153|170, 176, 179|223, 228, 230)\)|rgba\(47, 50, 51, 0\.38\)/;
+  // disabled controls, empty-state titles such as "No Shared Statistics"): reported by the standard theme too, not
+  // caused by the brand theme.
+  const STANDARD_LOW = /rgb\((145, 151, 153|170, 176, 179|196, 202, 204|223, 228, 230)\)|rgba\(47, 50, 51, 0\.38\)/;
   const BRAND_CSS = /\/[a-z0-9-]+-(light|dark)-theme\.css(\?|$)/;
 
   const parse = (c) => {
