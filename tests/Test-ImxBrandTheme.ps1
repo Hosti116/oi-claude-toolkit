@@ -190,7 +190,7 @@ if ($ImxWebDir) {
         $fakeDist = Join-Path $tmp 'dist-portal'
         New-Item -ItemType Directory -Force $fakeDist | Out-Null
         Set-Content (Join-Path $fakeDist 'index.html') '<script src="main-TEST.js"></script>'
-        Set-Content (Join-Path $fakeDist 'chunk-TEST.js') 'getPropertyValue("--ccc-brand-light-class")'
+        Set-Content (Join-Path $fakeDist 'chunk-TEST.js') 'const P="--ccc-brand-";function r(s,n){return s.getPropertyValue(P+n)}r(x,"light-class")'
         $emptyBin = Join-Path $tmp 'bin-imxweb'
         New-Item -ItemType Directory -Force $emptyBin | Out-Null
         $pkgArgs = @{ Id = 'kittest'; ImxWebDir = $ImxWebDir; BrandDir = $kitBrandDir; StagingRoot = (Join-Path $tmp 'staging'); ApiServerImxWeb = $emptyBin; PortalDistDir = $fakeDist; SkipTests = $true; SkipPortalBuild = $true }

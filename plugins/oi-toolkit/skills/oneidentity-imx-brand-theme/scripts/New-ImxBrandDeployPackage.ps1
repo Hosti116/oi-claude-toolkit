@@ -38,7 +38,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $PortalApp = 'qer-app-portal'
-$BundleMarker = '--ccc-brand-light-class'
+# BrandThemeService builds the variable names from a prefix (minified bundles keep the two parts apart).
+$BundleMarkers = '"--ccc-brand-"', '"light-class"'
 $problems = [Collections.Generic.List[string]]::new()
 # Resolve relative paths against the current PowerShell location (not the process folder) before any Push-Location.
 $StagingRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($StagingRoot)
@@ -69,8 +70,8 @@ if ($problems.Count -gt 0) { Write-Result 'blocked' $null @(); return }
 
 # 4. Bundle check
 if (-not (Test-Path -LiteralPath (Join-Path $PortalDistDir 'index.html'))) { $problems.Add("no portal build in $PortalDistDir"); Write-Result 'blocked' $null @(); return }
-$withPlugin = Get-ChildItem -LiteralPath $PortalDistDir -Filter 'chunk-*.js' | Where-Object { Select-String -LiteralPath $_.FullName -Pattern $BundleMarker -SimpleMatch -Quiet }
-if (-not $withPlugin) { $problems.Add("portal bundle without BrandThemeService ($BundleMarker not found): install the plugin (Install-ImxBrandPlugin.ps1) and rebuild"); Write-Result 'blocked' $null @(); return }
+$withPlugin = Get-ChildItem -LiteralPath $PortalDistDir -Filter 'chunk-*.js' | Where-Object { $text = Get-Content -LiteralPath $_.FullName -Raw; @($BundleMarkers | Where-Object { -not $text.Contains($_) }).Count -eq 0 }
+if (-not $withPlugin) { $problems.Add("portal bundle without BrandThemeService ($($BundleMarkers -join ' + ') not found in one chunk): install the plugin (Install-ImxBrandPlugin.ps1) and rebuild"); Write-Result 'blocked' $null @(); return }
 
 # 5. Staging
 $configSource = Join-Path $brandFull 'imx-theme-config.json'
