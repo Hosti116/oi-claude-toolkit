@@ -18,5 +18,8 @@
   {"path": "plugins/oi-toolkit/skills/dotnet-patterns/SKILL.md", "pattern": "customer", "reason": "variable name in an ECC code example"},
   {"path": "plugins/oi-toolkit/skills/oneidentity-im-posh/SKILL.md", "pattern": "FillDbWithFakeData", "reason": "upstream script file name"},
   {"path": "plugins/oi-toolkit/skills/security-review/SKILL.md", "pattern": "[.]env[.]local", "reason": "file name, not a host"},
-  {"path": "plugins/oi-toolkit/skills/security-review/cloud-infrastructure-security.md", "pattern": "10[.]0[.]0[.]0/16", "reason": "generic CIDR in an ECC Terraform example"}
+  {"path": "plugins/oi-toolkit/skills/security-review/cloud-infrastructure-security.md", "pattern": "10[.]0[.]0[.]0/16", "reason": "generic CIDR in an ECC Terraform example"},
+  {"path": "docs/superpowers/*/2026-11-15-imx-brand-theme-kit*.md", "pattern": "(?i)\\bclient[ei]\\b|\\bcustomers?\\b", "reason": "brand theme kit design/plan: generic wording for the organization that owns a brand, no names (names checked with OI_SCAN_TERMS)"},
+  {"path": "docs/superpowers/*/2026-11-15-imx-brand-theme-kit*.md", "pattern": "(?i)\\blab\\b", "reason": "brand theme kit design/plan: generic test environment wording and the LAB/TEST/DEMO production gate"},
+  {"path": "plugins/oi-toolkit/skills/oneidentity-imx-brand-theme/*", "pattern": "(?i)\\bclient[ei]\\b|\\bcustomers?\\b|\\blab\\b", "reason": "brand theme kit: generic wording in earlier versions of the kit files (history), no names"}
 ]
