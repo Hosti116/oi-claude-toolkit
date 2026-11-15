@@ -180,6 +180,29 @@ if ($ImxWebDir) {
         Assert-True ((Test-Path (Join-Path $buildOut 'kittest/kittest-dark-theme.css')) -and @($res.checks.contractMissing).Count -eq 0) 'css written with the full contract'
         $darkCss = Get-Content (Join-Path $buildOut 'kittest/kittest-dark-theme.css') -Raw
         Assert-True ($darkCss -match '--ccc-brand-dark-fill:\s*#[0-9a-f]{6}[;}]' -and $darkCss -match '--ccc-brand-light-class:\s*kittest-light-theme[;}]') 'contract values in the css (#rrggbb, class names)'
+        # Deploy package (Task 7): fake portal build, with and without the plugin in the bundle.
+        $package = Join-Path $kit 'scripts/New-ImxBrandDeployPackage.ps1'
+        $fakeDist = Join-Path $tmp 'dist-portal'
+        New-Item -ItemType Directory -Force $fakeDist | Out-Null
+        Set-Content (Join-Path $fakeDist 'index.html') '<script src="main-TEST.js"></script>'
+        Set-Content (Join-Path $fakeDist 'chunk-TEST.js') 'getPropertyValue("--ccc-brand-light-class")'
+        $emptyBin = Join-Path $tmp 'bin-imxweb'
+        New-Item -ItemType Directory -Force $emptyBin | Out-Null
+        $pkgArgs = @{ Id = 'kittest'; ImxWebDir = $ImxWebDir; BrandDir = $kitBrandDir; StagingRoot = (Join-Path $tmp 'staging'); ApiServerImxWeb = $emptyBin; PortalDistDir = $fakeDist; SkipTests = $true; SkipPortalBuild = $true }
+        $pkg = & $package @pkgArgs | Select-Object -Last 1 | ConvertFrom-Json
+        $paths = @($pkg.files | ForEach-Object { $_.path })
+        Assert-True ($pkg.status -eq 'ok' -and $paths.Count -eq 3 -and ($paths -contains 'custom\Html_qer-app-portal.zip') -and ($paths -contains 'Html_kittest-light-theme\imx-theme-config.json')) 'package with the three files'
+        Assert-True (@($pkg.files | Where-Object { -not $_.importNeeded }).Count -eq 0) 'everything to import against an empty bin'
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $zip = [IO.Compression.ZipFile]::OpenRead((Join-Path $pkg.staging 'custom\Html_qer-app-portal.zip'))
+        $entries = @($zip.Entries | ForEach-Object { $_.FullName }); $zip.Dispose()
+        Assert-True (($entries -contains 'kittest/kittest-light-theme.css') -and ($entries -contains 'index.html')) 'theme css inside the portal package'
+        Copy-Item (Join-Path $pkg.staging '*') $emptyBin -Recurse
+        $again = & $package @pkgArgs | Select-Object -Last 1 | ConvertFrom-Json
+        Assert-True ((@($again.files | Where-Object { $_.path -ne 'custom\Html_qer-app-portal.zip' -and $_.importNeeded }).Count) -eq 0) 'unchanged config files need no import'
+        Set-Content (Join-Path $fakeDist 'chunk-TEST.js') 'no plugin here'
+        Assert-True ((& $package @pkgArgs | Select-Object -Last 1 | ConvertFrom-Json).status -eq 'blocked') 'portal bundle without BrandThemeService blocks the package'
+
         Add-Content (Join-Path $kitThemeDir 'kittest-dark.scss') 'html { --mat-app-text-color: red; }'
         $bad = & $build -Id kittest -ImxWebDir $ImxWebDir -OutDir $buildOut | Select-Object -Last 1 | ConvertFrom-Json
         Assert-True ($bad.status -eq 'blocked' -and $bad.checks.scopeDiffs -ge 1) 'unscoped declaration blocks the build'
