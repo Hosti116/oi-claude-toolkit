@@ -39,5 +39,37 @@ Assert-True ((Get-ImxContrast '#ffffff' (Select-ImxDarkFill $palette '#eb212e'))
 Assert-True ((Get-ImxOnColor '#ffd200') -eq '#000000' -and (Get-ImxOnColor '#eb212e') -eq '#ffffff') 'on-color by contrast'
 #endregion
 
+#region brand.json (Task 2)
+$acme = Join-Path $kit 'examples/acme/brand.json'
+$tmp = Join-Path ([IO.Path]::GetTempPath()) "imx-brand-test-$PID"
+New-Item -ItemType Directory -Force $tmp | Out-Null
+Copy-Item (Join-Path $kit 'examples/acme/*.png') $tmp
+
+function New-TestBrand([hashtable] $Changes, [string] $Name) {
+    $json = Get-Content -LiteralPath $acme -Raw | ConvertFrom-Json -AsHashtable
+    foreach ($key in $Changes.Keys) {
+        $target = $json; $parts = $key -split '\.'
+        foreach ($p in $parts[0..($parts.Count - 2)]) { if (-not $target.ContainsKey($p)) { $target[$p] = @{} }; $target = $target[$p] }
+        if ($null -eq $Changes[$key]) { $target.Remove($parts[-1]) } else { $target[$parts[-1]] = $Changes[$key] }
+    }
+    $path = Join-Path $tmp "$Name.json"
+    $json | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $path -Encoding utf8NoBOM
+    return $path
+}
+
+$brand = Read-ImxBrand $acme
+Assert-True ($brand.LightClass -eq 'acme-light-theme' -and $brand.DarkClass -eq 'acme-dark-theme') 'classes from id'
+Assert-True ($brand.DeviceTheme -eq 'brand' -and $brand.Layout.LightMasthead -eq 'brand' -and $brand.Layout.DarkMasthead -eq 'surface-with-line') 'layout and device theme defaults'
+Assert-True ($brand.Colors.Warn -eq '#b45309' -and $brand.LogoHeight.Masthead -eq 52 -and $brand.LogoHeight.Login -eq 120) 'color and logo defaults'
+Assert-True ((Get-ImxContrast $brand.Colors.DarkAccent '#444647') -ge 4.0 -and $brand.Colors.OnDarkFill -eq '#ffffff') 'computed dark colors'
+Assert-True ((Test-Path -LiteralPath $brand.Logos.OnBrand) -and [IO.Path]::IsPathRooted($brand.Logos.OnBrand)) 'logo paths resolved from the brand.json folder'
+Assert-True (Test-ImxThrows { Read-ImxBrand (New-TestBrand @{ 'id' = 'Acme Corp' } 'bad-id') }) 'id not kebab-case is rejected'
+Assert-True (Test-ImxThrows { Read-ImxBrand (New-TestBrand @{ 'colors.primary' = $null } 'no-primary') }) 'missing colors.primary is rejected'
+Assert-True (Test-ImxThrows { Read-ImxBrand (New-TestBrand @{ 'logos.onBrand' = 'missing.png' } 'no-logo') }) 'missing logo file is rejected'
+$low = Read-ImxBrand (New-TestBrand @{ 'colors.dark' = @{ accent = '#ee424d' } } 'low-accent')
+Assert-True ($low.Colors.DarkAccent -eq '#ee424d' -and ($low.Warnings -join ' ') -match 'dark.accent') 'override below threshold kept with warning'
+#endregion
+
+Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 if ($script:failures -gt 0) { Write-Host "$($script:failures) failure(s)"; exit 1 }
 Write-Host 'All brand theme tests passed.'

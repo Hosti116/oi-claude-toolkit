@@ -92,4 +92,84 @@ function Get-ImxOnColor {
     return '#000000'
 }
 
-Export-ModuleMember -Function ConvertTo-ImxRgb, Get-ImxContrast, New-ImxBrandPalette, Select-ImxDarkAccent, Select-ImxDarkFill, Get-ImxOnColor
+#region brand.json
+$script:SchemaPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'brand.schema.json'
+$script:Defaults = @{ Warn = '#b45309'; Neutral = '#5f666d'; MastheadLogo = 52; LoginLogo = 120 }
+
+function Get-ImxValue($Object, [string] $Name, $Default) {
+    if ($null -ne $Object -and $Object.ContainsKey($Name) -and $null -ne $Object[$Name]) { return $Object[$Name] }
+    return $Default
+}
+
+function Resolve-ImxLogo([string] $BaseDir, [string] $Relative, [string] $Field) {
+    if (-not $Relative) { return $null }
+    $path = [IO.Path]::GetFullPath((Join-Path $BaseDir $Relative))
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "brand.json: logos.$Field not found: $path" }
+    return $path
+}
+
+function Read-ImxBrand {
+    <# Validates brand.json against brand.schema.json and resolves defaults, logo paths and dark colors. #>
+    [OutputType([pscustomobject])]
+    param([Parameter(Mandatory)][string] $Path)
+    $full = (Resolve-Path -LiteralPath $Path).Path
+    $raw = Get-Content -LiteralPath $full -Raw
+    $errors = $null
+    if (-not (Test-Json -Json $raw -SchemaFile $script:SchemaPath -ErrorVariable errors -ErrorAction SilentlyContinue)) {
+        throw "brand.json is not valid ($full): $(($errors | ForEach-Object { $_.Exception.Message }) -join '; ')"
+    }
+    $json = $raw | ConvertFrom-Json -AsHashtable
+    $baseDir = Split-Path -Parent $full
+    $colors = $json.colors
+    $dark = Get-ImxValue $colors 'dark' @{}
+    $primary = (ConvertTo-ImxHex (ConvertTo-ImxRgb $colors.primary))
+    $palette = New-ImxBrandPalette $primary
+    $warnings = [Collections.Generic.List[string]]::new()
+
+    $accent = Get-ImxValue $dark 'accent' $null
+    if ($accent) {
+        $accent = $accent.ToLowerInvariant()
+        if ((Get-ImxContrast $accent $script:DarkCard) -lt $script:MinAccentOnCard -or (Get-ImxContrast $accent $script:DarkPage) -lt $script:MinAccentOnPage) {
+            $warnings.Add("colors.dark.accent $accent is below $($script:MinAccentOnCard):1 on cards or $($script:MinAccentOnPage):1 on the page.")
+        }
+    } else { $accent = Select-ImxDarkAccent $palette }
+    $fill = Get-ImxValue $dark 'fill' $null
+    if ($fill) {
+        $fill = $fill.ToLowerInvariant()
+        if ((Get-ImxContrast '#ffffff' $fill) -lt $script:MinWhiteOnFill) { $warnings.Add("colors.dark.fill $fill carries white text below $($script:MinWhiteOnFill):1.") }
+    } else { $fill = Select-ImxDarkFill $palette $primary }
+
+    $logos = $json.logos
+    $layout = Get-ImxValue $json 'layout' @{}
+    $heights = Get-ImxValue $json 'logoHeight' @{}
+    return [pscustomobject]@{
+        Id          = $json.id
+        LightClass  = "$($json.id)-light-theme"
+        DarkClass   = "$($json.id)-dark-theme"
+        DisplayName = [pscustomobject]@{ Light = $json.displayName.light; Dark = $json.displayName.dark }
+        Colors      = [pscustomobject]@{
+            Primary    = $primary
+            Palette    = $palette
+            Warn       = (Get-ImxValue $colors 'warn' $script:Defaults.Warn).ToLowerInvariant()
+            Neutral    = (Get-ImxValue $colors 'accentNeutral' $script:Defaults.Neutral).ToLowerInvariant()
+            DarkAccent = $accent
+            DarkFill   = $fill
+            OnDarkFill = '#ffffff'
+            OnPrimary  = Get-ImxOnColor $primary
+        }
+        Logos       = [pscustomobject]@{
+            OnBrand = Resolve-ImxLogo $baseDir $logos.onBrand 'onBrand'
+            OnDark  = Resolve-ImxLogo $baseDir $logos.onDark 'onDark'
+            OnLight = Resolve-ImxLogo $baseDir (Get-ImxValue $logos 'onLight' $null) 'onLight'
+        }
+        LogoHeight  = [pscustomobject]@{ Masthead = Get-ImxValue $heights 'masthead' $script:Defaults.MastheadLogo; Login = Get-ImxValue $heights 'login' $script:Defaults.LoginLogo }
+        Layout      = [pscustomobject]@{ LightMasthead = Get-ImxValue $layout 'lightMasthead' 'brand'; DarkMasthead = Get-ImxValue $layout 'darkMasthead' 'surface-with-line' }
+        DeviceTheme = Get-ImxValue $json 'deviceTheme' 'brand'
+        Notes       = @(Get-ImxValue $json 'notes' @())
+        Warnings    = $warnings.ToArray()
+        SourceDir   = $baseDir
+    }
+}
+#endregion
+
+Export-ModuleMember -Function ConvertTo-ImxRgb, ConvertTo-ImxHex, Get-ImxContrast, New-ImxBrandPalette, Select-ImxDarkAccent, Select-ImxDarkFill, Get-ImxOnColor, Read-ImxBrand

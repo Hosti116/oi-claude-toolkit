@@ -1,0 +1,8 @@
+{
+  "$schema": "../../brand.schema.json",
+  "id": "acme",
+  "displayName": { "light": "Acme chiaro", "dark": "Acme scuro" },
+  "colors": { "primary": "#1f6f43" },
+  "logos": { "onBrand": "logo-on-brand.png", "onDark": "logo-on-dark.png" },
+  "notes": ["Example brand of the kit: fictitious company and logos."]
+}

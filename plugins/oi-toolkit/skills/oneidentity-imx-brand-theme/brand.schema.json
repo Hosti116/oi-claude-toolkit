@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Web Portal brand theme (oi-toolkit, skill oneidentity-imx-brand-theme)",
+  "type": "object",
+  "required": ["id", "displayName", "colors", "logos"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "description": "Kebab-case id: theme classes <id>-light-theme and <id>-dark-theme, CSS folder <id>/ in the portal package.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,30}$"
+    },
+    "displayName": {
+      "type": "object",
+      "required": ["light", "dark"],
+      "additionalProperties": false,
+      "properties": { "light": { "type": "string", "minLength": 1 }, "dark": { "type": "string", "minLength": 1 } }
+    },
+    "colors": {
+      "type": "object",
+      "required": ["primary"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": { "$ref": "#/$defs/hex", "description": "Brand color from the brand book (hue 500)." },
+        "accentNeutral": { "$ref": "#/$defs/hex", "description": "Neutral for light tints and the Material accent. Default: anthracite #5f666d." },
+        "warn": { "$ref": "#/$defs/hex", "description": "Warnings and errors. Default: amber #b45309." },
+        "dark": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accent": { "$ref": "#/$defs/hex", "description": "Single red/brand tone for text, links, icons in the dark theme. Default: computed." },
+            "fill": { "$ref": "#/$defs/hex", "description": "Fill with white text in the dark theme. Default: computed." }
+          }
+        }
+      }
+    },
+    "logos": {
+      "type": "object",
+      "required": ["onBrand", "onDark"],
+      "additionalProperties": false,
+      "properties": {
+        "onBrand": { "type": "string", "description": "Logo for the brand-colored masthead and login (usually white). Path relative to brand.json." },
+        "onDark": { "type": "string", "description": "Logo for the dark masthead and login (usually in brand colors)." },
+        "onLight": { "type": "string", "description": "Logo for a light masthead (layout.lightMasthead = light)." }
+      }
+    },
+    "logoHeight": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "masthead": { "type": "integer", "minimum": 24, "maximum": 56 }, "login": { "type": "integer", "minimum": 48, "maximum": 200 } }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lightMasthead": { "enum": ["brand", "light"] },
+        "darkMasthead": { "enum": ["surface-with-line", "brand"] }
+      }
+    },
+    "deviceTheme": { "enum": ["brand", "standard"], "description": "brand: Device theme uses the brand themes." },
+    "notes": { "type": "array", "items": { "type": "string" }, "description": "Deviations from the brand book agreed with the customer." }
+  },
+  "$defs": { "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" } }
+}
