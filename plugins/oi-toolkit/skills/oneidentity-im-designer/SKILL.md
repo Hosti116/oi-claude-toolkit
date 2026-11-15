@@ -75,6 +75,9 @@ Confirmed on an earlier version (re-confirm on the installed version the first t
 - `HandleObjectComponent.FireGenEvent` (`EventName` + `WhereClause` with the keys of the triggering object, e.g.
   `$UID_Person$`) chains separate processes; `FireGenEvent("Read")` on a target-system object re-syncs it.
 - `SQLComponent.Exists` is a **runtime** check (success → Successor, failure → `ErrorSuccessor`), not a generating condition.
+- `AdHocProjection` step: `CausingEntityPatch = DPR_WrapObjectForProjection(Entity)` carries only the changed columns
+  of the entity; values from referenced tables must be listed in `ForceSyncOf` as `[<table>.]<column>`
+  (details and verified rules: skill oneidentity-im-sync-connector, "Sync project pitfalls").
 
 ## Repo layout
 ```

@@ -27,6 +27,9 @@
     Known OIM schema restrictions (verified in the Synchronization Editor wizard of an earlier project, OIM 9.2;
     to be re-confirmed on 10.0): no Description attribute on Class/Property, no IsAutofill attribute.
 
+    The listing reads every field of the class: a property missing from it makes the connector fail
+    ("No Property x found"), one returned as null makes object matching compare against an empty value.
+
     Two layouts:
     - default: all code inline as CustomCommands (ServiceNowConnector.xml). Connect and read verified in the wizard
       of the same earlier project (OIM 9.2).
@@ -721,7 +724,6 @@ $setParams
     {
         $cls = $c.Class
         $get = "Get-OneIMSnow$cls"; $new = "New-OneIMSnow$cls"; $set = "Set-OneIMSnow$cls"; $rem = "Remove-OneIMSnow$cls"
-        $hasRevision = @($c.Fields | Where-Object { $_.Name -eq "sys_updated_on" }).Count -gt 0
 
         [void]$sb.AppendLine("")
         $classFilter = ""
@@ -782,15 +784,13 @@ $setParams
             [void]$sb.AppendLine("                </Property>")
         }
 
-        $listProps = @("sys_id", $c.Display)
-        if ($hasRevision) { $listProps += "sys_updated_on" }
-        $listProps = @($listProps | Select-Object -Unique)
+        $listProps = @($ordered | ForEach-Object { $_.Name })
 
         [void]$sb.AppendLine("")
         [void]$sb.AppendLine("            </Properties>")
         [void]$sb.AppendLine("")
         [void]$sb.AppendLine("            <ReadConfiguration>")
-        [void]$sb.AppendLine("                <!-- list only key, display and revision properties -->")
+        [void]$sb.AppendLine("                <!-- list every property: the sync engine reads matching properties from this result -->")
         [void]$sb.AppendLine("                <ListingCommand Command=`"$get`">")
         [void]$sb.AppendLine("                    <SetParameter Param=`"PropertiesToRequest`" Source=`"FixedArray`" Value=`"$($listProps -join ',')`" />")
         [void]$sb.AppendLine("                </ListingCommand>")

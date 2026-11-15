@@ -106,6 +106,16 @@ Check "429 retried (>=2s)" ($sw.Elapsed.TotalSeconds -ge 2)
 Check "datetime typed UTC" ($all[0].sys_updated_on -is [datetime] -and $all[0].sys_updated_on.Kind -eq 'Utc' -and $all[0].sys_updated_on.Year -eq 2026)
 Check "missing field -> null" ($null -eq $all[0].description)
 
+# every property bound to the Get command must be requested by the listing
+# (missing: "No Property x found" in OIM; null: matching silently fails)
+$missing = foreach ($cl in $def.PowershellConnectorDefinition.Schema.Class) {
+    $sp = $cl.ReadConfiguration.ListingCommand.SetParameter
+    if (-not $sp) { continue }   # module layout: the listing has no PropertiesToRequest and returns every field
+    $list = $sp.Value -split ','
+    foreach ($p in $cl.Properties.Property) { if ($list -notcontains $p.Name) { "$($cl.Name).$($p.Name)" } }
+}
+Check "listing requests every property" (@($missing).Count -eq 0)
+
 # single, typed int
 $one = Get-OneIMSnowDepartment -sys_id $all[2].sys_id 6>$null
 Check "single get name" ($one.name -eq "Dept 3")

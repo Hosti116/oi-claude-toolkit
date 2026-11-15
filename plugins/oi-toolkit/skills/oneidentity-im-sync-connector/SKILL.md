@@ -29,8 +29,13 @@ Grep first, then read with offset/limit (the files are long).
   **fails in the wizard** (`The term 'Connect-XXX' is not recognized`, `PageShell03_ConnectionTargetView`).
   → Put **all code inline as `CustomCommands`**, keep `PredefinedCommands` empty.
 - Passwords: `ConnectionParameter IsSensibleData="true"`, passed with `ConversionMethod="ToSecureString"`.
-- Reading: `ListingCommand` with a light `PropertiesToRequest` list, then a `CommandSequence` that re-reads one object by key.
-  **[VERIFICATO]** a full sync then does one call per object: on big tables filter the list or return all fields in the listing.
+- Reading: the `ListingCommand` must return **every** property of the class with real values.
+  **[VERIFICATO in OIM 9.2]** matching compares the listing values; the documented per-object reload
+  (`vendor/IdentityManager.PoSh-Connector-Guide/README.md:646`) does not happen before matching: a property absent
+  from the listing → `No Property x found` (`PoshSystemObjectDataExtensions.GetPathItemFromPSObject`); present but
+  null → matching rules on it silently never match. Keep the `CommandSequence` reload by key for single-object reads.
+- After regenerating the XML, re-run "Edit connection" in the Synchronization Editor: the project keeps the old
+  definition until then (and commit to the database if the sync runs on the Job server) **[DEDOTTO]**.
 - Update with `Condition="ModificationExists"`; `ModifiedBy` Insert on New, Update on Set; `IsRevision="true"` on the last-modified field.
 - Command names with a unique prefix: `Verb-OneIM<System><Noun>`.
 
@@ -82,6 +87,39 @@ every `Map Parameter=` is a real parameter of its command.
 Synchronization Editor wizard (operator; wizard errors arrive as screenshots — the class name in the stack, e.g.
 `PageShell03_ConnectionTargetView`, tells the phase) → 4. **read-only sync** into a non-production environment (no provisioning, simulate first)
 → 5. only then provisioning/writes, one class at a time.
+
+## Sync project pitfalls (seen in OIM 9.2)
+- **[VERIFICATO]** "Key resolution" virtual properties need a unique search property. On a non-unique one (e.g. a
+  person's city) the engine warns `does not have unique data ... is ignored. This results in empty references` and
+  maps an empty value; with a connector that clears on `$null`, provisioning empties the target field. To read a
+  value of a referenced object use an **Object reference** property (route, e.g. `UID_Person.City`).
+- **[VERIFICATO]** Ad hoc provisioning (`AdHocProjection`) transfers only the changes in `CausingEntityPatch`
+  (`DPR_WrapObjectForProjection(Entity)`). A process fired by a dedicated event with no column change ends `Success`
+  with no modifications; values read from other tables are never in the patch. Fix with the job parameter
+  `ForceSyncOf`: comma-delimited `[<table>.]<column>` of **source columns** (not virtual property names, not bare
+  table names — `Person,Department` forced nothing):
+  - columns of the account table without prefix (`FirstName`); other tables as `Table.Column`, also for multi-hop
+    routes: list the final table and column (`Department.CustomProperty08` for
+    `UID_Person.UID_Department.CustomProperty08`) **[VERIFICATO]** up to 3 hops;
+  - script properties that use `$UID_Person$` are forced by listing `UID_Person` **[VERIFICATO]**; put it last;
+  - write the value one entry per line, and test one entry first:
+    ```vb
+    Value = String.Join(",", New String() { _
+        "FirstName", _
+        "Person.City", _
+        "Department.CustomProperty08", _
+        "UID_Person" _
+    })
+    ```
+    **[VERIFICATO]** a single long line containing an invalid entry (a table not reachable by FK) silently ignored
+    every entry after a certain point; cause not isolated (invalid entry or invisible pasted character) **[DEDOTTO]**.
+- **[DEDOTTO]** Values that only another table points to (the person's AD account, the manager's account) are not
+  reachable by an FK route: use a script property and force it with `UID_Person`.
+- **[VERIFICATO]** Forced properties are rewritten on every ad hoc run: an empty OIM value clears the target field.
+  **[DEDOTTO]** A script property must not `catch` and return an empty string: a transient query error would clear
+  target data. Let the exception fail the job.
+- Debugging ad hoc: the provisioning log (journal) lists the properties written per object; `Success` with an empty
+  "Details" section means nothing was in the patch, not a connector failure.
 
 ## Safety
 - Never point a connector or test at a production target. Credentials only via connection parameters / SecretManagement,

@@ -25,6 +25,7 @@ autenticazione **Basic**. Gira su **Windows PowerShell 5.1** (Identity Manager �
 | `ServiceNowConnector.Module.xml` + `ServiceNowConnector.psm1` | **Generati** con `-UseModule`: variante con la logica in un modulo esterno (opzionale) |
 | `Verify-ServiceNowConnector.ps1` | Verifica offline: mock HTTP locale + controlli funzionali. Carica le funzioni **dall'XML** |
 | `Test-ServiceNowConnector.ps1` | Smoke test contro un'istanza reale **non di produzione** (scrive solo con `-WriteTests`) |
+| `Export-ServiceNowUsers.ps1` | Utility in sola lettura: esporta `sys_user` in CSV (`sys_id`, UPN e campi anagrafici) per preparare il matching; riepilogo UPN vuoti/duplicati. Il campo UPN predefinito `u_upn` è un campo **custom** di esempio: adattare `-Fields` alla propria istanza. **[VERIFICATO offline]** con risposte simulate; mai eseguito su un'istanza |
 
 ## Istanza: parametro obbligatorio, mai salvata
 
@@ -81,7 +82,7 @@ con un'istanza diversa conviene `-Refresh`.
 | Tipi | `integer`→Int, `boolean`→Bool, `glide_date_time`/`glide_date`→DateTime UTC, resto String (decimali e valute inclusi) | **[VERIFICATO offline]** (`head_count` int, `sys_updated_on` UTC) |
 | Campi esclusi | `journal*`, `collection`, `password*`, immagini/video, nomi riservati PowerShell | **[VERIFICATO offline]** warning in rigenerazione (es. `sys_user.user_password`, `photo`, `avatar`) |
 | Sola lettura | campi `sys_*`; chiave `sys_id` `IsUniqueKey` + `IsMandatory` + `ReadOnly` | **[VERIFICATO in OIM 9.2]** |
-| Lettura | lista con `PropertiesToRequest` leggero, paging a offset con `ORDERBYsys_id`, poi rilettura per `sys_id` | Paging **[VERIFICATO offline]**; **[VERIFICATO su istanza]** `core_company` con migliaia di record ≈ 20 s in lettura completa |
+| Lettura | il listing richiede **tutti** i campi della classe, paging a offset con `ORDERBYsys_id`; rilettura per `sys_id` per il singolo oggetto | Paging **[VERIFICATO offline]**; **[VERIFICATO su istanza]** `core_company` con migliaia di record ≈ 20 s in lettura completa; listing completo necessario al matching **[VERIFICATO in OIM 9.2]** (vedi "Regole OIM apprese") |
 | Scrittura | POST / PATCH (solo i parametri passati, `$null` svuota) / DELETE (404 = già cancellato) | **[VERIFICATO offline]** |
 | Retry | 429 e 5xx, 3 tentativi, backoff 2/4/8 s | **[VERIFICATO offline]** |
 | Errori | status HTTP e **body JSON di ServiceNow** nel messaggio d'eccezione | **[VERIFICATO offline]** su entrambi i motori, vedi sotto |
@@ -116,15 +117,17 @@ aggiornare questa riga a [VERIFICATO in OIM 10.0].
 
 ## Test
 
-### Offline (`Verify-ServiceNowConnector.ps1`, mock su `localhost:18089`) — 2026-10-31
+### Offline (`Verify-ServiceNowConnector.ps1`, mock su `localhost:18089`) — 2026-11-15
+
+Ultima esecuzione con una cache sintetica (`cmn_department` + `core_company`), dopo il passaggio al listing completo.
 
 | Layout | Windows PowerShell 5.1.26100 | PowerShell 7.6.9 |
 |---|---|---|
-| `ServiceNowConnector.xml` (inline) | **20/20 PASS** | **20/20 PASS** |
-| `ServiceNowConnector.Module.xml` + psm1 | **22/22 PASS** | **22/22 PASS** |
+| `ServiceNowConnector.xml` (inline) | **21/21 PASS** | **21/21 PASS** |
+| `ServiceNowConnector.Module.xml` + psm1 | **23/23 PASS** | **23/23 PASS** |
 
 Controlli (inline): credenziali errate rifiutate; status 401 e **body 401** nel messaggio; connessione; paging (25
-record, pagine da 10); retry su 429; DateTime UTC; campo mancante = null; lettura singola; Int tipizzato; creazione
+record, pagine da 10); retry su 429; DateTime UTC; campo mancante = null; listing con tutte le proprietà; lettura singola; Int tipizzato; creazione
 con `sys_id` e accenti; update parziale; `$null` svuota; `Set` senza output; doppia cancellazione; 404 dopo la
 cancellazione e **body 404** nel messaggio; disconnessione. Il layout a modulo aggiunge: modulo mancante → errore
 chiaro; funzioni del modulo visibili globalmente.
@@ -162,6 +165,12 @@ Il generatore salva il file precedente come `.bak`: i `.bak` non vanno versionat
 - **[VERIFICATO in OIM 9.2]** XML inline: connessione e lettura dei department funzionanti; XML v2.0 generato online
   (6 tabelle organizzative) caricato e funzionante. Le classi aggiunte dopo (utenti, gruppi, ruoli, tabelle
   referenziate) **non** sono mai state caricate nel wizard.
+- **[VERIFICATO in OIM 9.2]** contrariamente alla guida (`vendor/IdentityManager.PoSh-Connector-Guide/README.md:646`,
+  "reloads each object individually"), il matching usa i valori del listing: una proprietà assente fallisce con
+  `No Property x found` (`PoshSystemObjectDataExtensions.GetPathItemFromPSObject`), una presente ma null fa fallire
+  in silenzio le regole di matching su quel campo (es. UPN ↔ campo custom dell'istanza). Il listing deve restituire tutti i campi.
+- **[DEDOTTO]** dopo aver rigenerato l'XML, OIM continua a usare la definizione salvata nel progetto: rifare
+  "Edit connection" nel Synchronization Editor (e commit nel database se la sync gira sul Job server).
 - **Variante modulo**: mai provata nel wizard. Il psm1 va copiato allo stesso percorso su ogni Job server e client
   admin; con `RemoteSigned` un file scaricato può essere bloccato (`Unblock-File`) **[DEDOTTO]**.
 
@@ -183,5 +192,5 @@ Il generatore salva il file precedente come `.bak`: i `.bak` non vanno versionat
    dizionario non mostra **[DEDOTTO]**.
 3. **Autenticazione Basic**: la password è in chiaro in memoria per costruire l'header; l'utente ServiceNow deve avere
    i soli permessi necessari. OAuth non implementato.
-4. **Prestazioni**: una lettura completa fa una chiamata per oggetto dopo la lista; sulle tabelle grandi filtrare la lista
-   o restituire tutti i campi nel listing.
+4. **Prestazioni**: la lettura completa restituisce tutti i campi nel listing; resta da misurare il tempo su tabelle
+   molto grandi (filtrare la lista con `-Tables` se serve).
