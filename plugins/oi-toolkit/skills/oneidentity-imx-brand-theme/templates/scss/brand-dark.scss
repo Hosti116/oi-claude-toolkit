@@ -1,0 +1,141 @@
+// Dark brand theme (class palette.$dark-class). Dark UI; masthead dark with a brand bottom line
+// (layout.darkMasthead = surface-with-line) or in the brand color (= brand).
+//
+// The dark-mode rules of the components are scoped to .eui-dark-theme, a class that a custom theme cannot set
+// (EuiThemeService adds one class only). The ccc plugin (BrandThemeService) adds it next to this class and
+// recolors the fixed One Identity palette. Without the plugin only the masthead, the login page and the
+// Material palette are dark.
+//
+// Colors (palette partial): one accent for text buttons, links, icons, active tab and indicators
+// ($dark-accent, Material primary); $dark-fill with $on-dark-fill text for filled buttons, FABs, badges,
+// selected chips/dates, stepper icons and title bars (overrides below: the accent would give them dark text).
+
+@use '@angular/material' as mat;
+@use '../../shared/scss/base/theme' as imx-theme;
+@use 'brand-base' as base;
+@use 'brand-palette' as palette;
+@use 'brand-logos' as logos;
+@use 'brand-branding' as branding;
+@use 'brand-scoped-theme' as scoped;
+
+$theme-name: palette.$dark-class;
+$dark-fill: palette.$dark-fill;
+$on-dark-fill: palette.$on-dark-fill;
+
+$primary: mat.m2-define-palette(palette.$primary-palette, palette.$dark-accent-hue, 100, 400);
+$accent: mat.m2-define-palette(palette.$neutral-palette, 200, 50, 400);
+$warn: mat.m2-define-palette(palette.$warn-palette, 300, 100, 500);
+
+$theme: mat.m2-define-dark-theme(
+  (
+    color: (
+      primary: $primary,
+      accent: $accent,
+      warn: $warn,
+    ),
+    typography: base.$typography,
+  )
+);
+
+// Not theme.theme(): see _brand-scoped-theme.scss.
+@include scoped.theme($theme-name, $theme);
+@include imx-theme.theme($theme-name, $theme);
+
+@include branding.contract-root(palette.$light-class, palette.$dark-class, palette.$device-theme);
+
+:where(body.#{$theme-name}) {
+  @include branding.contract-map('map', palette.$map-base);
+  @include branding.contract-map('dark-fg', palette.$map-dark-foreground);
+  @include branding.contract-map('dark-surface', palette.$map-dark-surface);
+  --ccc-brand-dark-fill: #{palette.$dark-fill-string};
+  --ccc-brand-on-dark-fill: #{palette.$on-dark-fill-string};
+}
+
+$masthead-border-width: 3px;
+
+body.#{$theme-name} {
+  // Selector must beat ".eui-dark-theme eui-masthead header.eui-masthead" (0,2,2), active once the ccc
+  // plugin adds .eui-dark-theme: body.<theme> eui-masthead header.eui-masthead = (0,2,3).
+  eui-masthead header.eui-masthead {
+    @if palette.$dark-masthead == 'brand' {
+      background-color: palette.$brand-primary;
+      color: palette.$on-primary;
+    } @else {
+      background-color: palette.$surface-dark;
+      color: palette.$on-surface-dark;
+      border-bottom: $masthead-border-width solid palette.$brand-primary;
+    }
+
+    .mat-toolbar.mat-primary {
+      --mat-toolbar-container-background-color: transparent;
+      --mat-toolbar-container-text-color: #{palette.$on-surface-dark};
+      background: transparent;
+      color: palette.$on-surface-dark;
+    }
+
+    .mat-mdc-button.mat-unthemed {
+      color: palette.$on-surface-dark;
+    }
+  }
+
+  // Login page on the dark surface (the base theme would use the primary color).
+  .imx-loginPage {
+    background-color: palette.$surface-dark;
+    color: palette.$on-surface-dark;
+  }
+
+  @if palette.$dark-masthead == 'brand' {
+    @include branding.masthead-logo(logos.$logo-on-brand, logos.$logo-on-brand-ratio, palette.$masthead-logo-height);
+  } @else {
+    @include branding.masthead-logo(logos.$logo-on-dark, logos.$logo-on-dark-ratio, palette.$masthead-logo-height);
+  }
+  @include branding.login-logo(logos.$logo-on-dark, logos.$logo-on-dark-ratio, palette.$login-logo-height);
+
+  // Primary fills: same selectors as Material emits them inside body.<theme>; later in the file, so they win.
+  --mat-badge-background-color: #{$dark-fill};
+  --mat-badge-text-color: #{$on-dark-fill};
+  --mat-datepicker-calendar-date-selected-state-background-color: #{$dark-fill};
+  --mat-datepicker-calendar-date-selected-state-text-color: #{$on-dark-fill};
+  --mat-stepper-header-selected-state-icon-background-color: #{$dark-fill};
+  --mat-stepper-header-selected-state-icon-foreground-color: #{$on-dark-fill};
+  --mat-stepper-header-done-state-icon-background-color: #{$dark-fill};
+  --mat-stepper-header-done-state-icon-foreground-color: #{$on-dark-fill};
+  --mat-stepper-header-edit-state-icon-background-color: #{$dark-fill};
+  --mat-stepper-header-edit-state-icon-foreground-color: #{$on-dark-fill};
+
+  // Title bars that the ElementalUI (sidesheet) and imx (login-theme) mixins fill with the darker primary hue.
+  .eui-sidesheet .mat-toolbar,
+  .imx-card-header {
+    background-color: $dark-fill;
+    color: $on-dark-fill;
+  }
+
+  .mat-badge:not(.mat-badge-accent, .mat-badge-warn) {
+    --mat-badge-background-color: #{$dark-fill};
+    --mat-badge-text-color: #{$on-dark-fill};
+  }
+
+  .mat-mdc-unelevated-button.mat-primary,
+  .mat-mdc-raised-button.mat-primary {
+    --mat-button-filled-container-color: #{$dark-fill};
+    --mat-button-filled-label-text-color: #{$on-dark-fill};
+    --mat-button-protected-container-color: #{$dark-fill};
+    --mat-button-protected-label-text-color: #{$on-dark-fill};
+  }
+
+  .mat-mdc-fab.mat-primary,
+  .mat-mdc-mini-fab.mat-primary {
+    --mat-fab-container-color: #{$dark-fill};
+    --mat-fab-foreground-color: #{$on-dark-fill};
+    --mat-fab-small-container-color: #{$dark-fill};
+    --mat-fab-small-foreground-color: #{$on-dark-fill};
+  }
+
+  .mat-mdc-standard-chip.mat-mdc-chip-selected.mat-primary,
+  .mat-mdc-standard-chip.mat-mdc-chip-highlighted.mat-primary {
+    --mat-chip-elevated-selected-container-color: #{$dark-fill};
+    --mat-chip-selected-label-text-color: #{$on-dark-fill};
+    --mat-chip-selected-trailing-icon-color: #{$on-dark-fill};
+    --mat-chip-with-icon-selected-icon-color: #{$on-dark-fill};
+  }
+}

@@ -1,0 +1,55 @@
+// Logo and runtime contract of the brand themes.
+// Logo: Identity Manager has a single CompanyLogoUrl for all themes, so the theme draws its own logo. Works only
+// while CompanyLogoUrl is empty. DOM selectors depend on:
+//   - eui-masthead template (@elemental-ui/core): header.eui-masthead > .eui-masthead-inner > eui-logo > svg
+//   - qbm login-page.component.html: .imx-loginPage > .imx-companyLogo > eui-icon + h1
+// Contract: CSS variables read by BrandThemeService (ccc plugin); names fixed by the oi-toolkit kit.
+
+@use 'sass:math';
+
+@mixin logo-image($logo, $ratio, $height) {
+  display: inline-block;
+  width: math.round($height * $ratio);
+  height: $height !important; // eui-logo sets an inline height through a host binding
+  background: $logo no-repeat center / contain;
+}
+
+@mixin masthead-logo($logo, $ratio, $height) {
+  .eui-masthead-inner > eui-logo {
+    @include logo-image($logo, $ratio, $height);
+
+    svg {
+      display: none;
+    }
+  }
+}
+
+@mixin login-logo($logo, $ratio, $height) {
+  .imx-loginPage .imx-companyLogo:not(:has(.custom-logo)) {
+    > eui-icon,
+    > h1 {
+      display: none;
+    }
+
+    &::before {
+      content: '';
+      @include logo-image($logo, $ratio, $height);
+    }
+  }
+}
+
+// Same declarations in both theme files: no scope leak between them.
+@mixin contract-root($light-class, $dark-class, $device-theme) {
+  :root {
+    --ccc-brand-light-class: #{$light-class};
+    --ccc-brand-dark-class: #{$dark-class};
+    --ccc-brand-device-theme: #{$device-theme};
+  }
+}
+
+// $map: shade -> quoted hex string (quoted so that Sass keeps #rrggbb as written).
+@mixin contract-map($prefix, $map) {
+  @each $shade, $color in $map {
+    --ccc-brand-#{$prefix}-#{$shade}: #{$color};
+  }
+}

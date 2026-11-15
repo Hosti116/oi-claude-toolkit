@@ -95,6 +95,34 @@ function Get-ImxOnColor {
 #region brand.json
 $script:SchemaPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'brand.schema.json'
 $script:Defaults = @{ Warn = '#b45309'; Neutral = '#5f666d'; MastheadLogo = 52; LoginLogo = 120 }
+$script:Hues = '50', '100', '200', '300', '400', '500', '600', '700', '800', '900'
+
+# Default neutral (anthracite) and warn (amber) palettes, with their text contrast (proven on the Web Portal).
+$script:AnthracitePalette = [ordered]@{ '50' = '#f2f3f4'; '100' = '#dfe1e3'; '200' = '#c4c8cc'; '300' = '#a3a9af'; '400' = '#7f868d'; '500' = '#5f666d'; '600' = '#4c5258'; '700' = '#3c4146'; '800' = '#2e3236'; '900' = '#1f2225' }
+$script:AnthraciteContrast = @{ '50' = 'dark'; '100' = 'dark'; '200' = 'dark'; '300' = 'dark'; '400' = 'light'; '500' = 'light'; '600' = 'light'; '700' = 'light'; '800' = 'light'; '900' = 'light' }
+$script:AmberPalette = [ordered]@{ '50' = '#fff5e6'; '100' = '#ffe4bf'; '200' = '#ffd194'; '300' = '#ffbd66'; '400' = '#f59e2e'; '500' = '#b45309'; '600' = '#a14a08'; '700' = '#8c4007'; '800' = '#773606'; '900' = '#5c2a04' }
+$script:AmberContrast = @{ '50' = 'dark'; '100' = 'dark'; '200' = 'dark'; '300' = 'dark'; '400' = 'dark'; '500' = 'light'; '600' = 'light'; '700' = 'light'; '800' = 'light'; '900' = 'light' }
+
+function Get-ImxPaletteContrast($Palette, $Overrides) {
+    $result = @{}
+    foreach ($hue in $script:Hues) {
+        $result[$hue] = if ($Overrides -and $Overrides.ContainsKey($hue)) { $Overrides[$hue] }
+        elseif ((Get-ImxOnColor $Palette[$hue]) -eq '#ffffff') { 'light' } else { 'dark' }
+    }
+    return $result
+}
+
+function ConvertTo-ImxPalette($Map) {
+    $palette = [ordered]@{}
+    foreach ($hue in $script:Hues) { $palette[$hue] = $Map[$hue].ToLowerInvariant() }
+    return $palette
+}
+
+function Get-ImxSecondaryPalette([string] $Base, [string] $Default, $DefaultPalette, $DefaultContrast) {
+    if ($Base -eq $Default) { return @{ Palette = $DefaultPalette; Contrast = $DefaultContrast } }
+    $palette = New-ImxBrandPalette $Base
+    return @{ Palette = $palette; Contrast = (Get-ImxPaletteContrast $palette $null) }
+}
 
 function Get-ImxValue($Object, [string] $Name, $Default) {
     if ($null -ne $Object -and $Object.ContainsKey($Name) -and $null -ne $Object[$Name]) { return $Object[$Name] }
@@ -123,8 +151,15 @@ function Read-ImxBrand {
     $colors = $json.colors
     $dark = Get-ImxValue $colors 'dark' @{}
     $primary = (ConvertTo-ImxHex (ConvertTo-ImxRgb $colors.primary))
-    $palette = New-ImxBrandPalette $primary
+    $explicit = Get-ImxValue $colors 'palette' $null
+    $palette = if ($explicit) { ConvertTo-ImxPalette $explicit } else { New-ImxBrandPalette $primary }
     $warnings = [Collections.Generic.List[string]]::new()
+    if ($palette['500'] -ne $primary) { $warnings.Add("colors.palette.500 $($palette['500']) differs from colors.primary $primary.") }
+    $contrast = Get-ImxPaletteContrast $palette (Get-ImxValue $colors 'paletteContrast' $null)
+    $warn = (Get-ImxValue $colors 'warn' $script:Defaults.Warn).ToLowerInvariant()
+    $neutral = (Get-ImxValue $colors 'accentNeutral' $script:Defaults.Neutral).ToLowerInvariant()
+    $warnSet = Get-ImxSecondaryPalette $warn $script:Defaults.Warn $script:AmberPalette $script:AmberContrast
+    $neutralSet = Get-ImxSecondaryPalette $neutral $script:Defaults.Neutral $script:AnthracitePalette $script:AnthraciteContrast
 
     $accent = Get-ImxValue $dark 'accent' $null
     if ($accent) {
@@ -142,17 +177,26 @@ function Read-ImxBrand {
     $logos = $json.logos
     $layout = Get-ImxValue $json 'layout' @{}
     $heights = Get-ImxValue $json 'logoHeight' @{}
+    $lightMasthead = Get-ImxValue $layout 'lightMasthead' 'brand'
+    if ($lightMasthead -eq 'light' -and -not (Get-ImxValue $logos 'onLight' $null)) {
+        throw "brand.json: layout.lightMasthead = light needs logos.onLight ($full)."
+    }
     return [pscustomobject]@{
         Id          = $json.id
         LightClass  = "$($json.id)-light-theme"
         DarkClass   = "$($json.id)-dark-theme"
         DisplayName = [pscustomobject]@{ Light = $json.displayName.light; Dark = $json.displayName.dark }
         Colors      = [pscustomobject]@{
-            Primary    = $primary
-            Palette    = $palette
-            Warn       = (Get-ImxValue $colors 'warn' $script:Defaults.Warn).ToLowerInvariant()
-            Neutral    = (Get-ImxValue $colors 'accentNeutral' $script:Defaults.Neutral).ToLowerInvariant()
-            DarkAccent = $accent
+            Primary         = $primary
+            Palette         = $palette
+            PaletteContrast = $contrast
+            Warn            = $warn
+            WarnPalette     = $warnSet.Palette
+            WarnContrast    = $warnSet.Contrast
+            Neutral         = $neutral
+            NeutralPalette  = $neutralSet.Palette
+            NeutralContrast = $neutralSet.Contrast
+            DarkAccent      = $accent
             DarkFill   = $fill
             OnDarkFill = '#ffffff'
             OnPrimary  = Get-ImxOnColor $primary
@@ -163,7 +207,7 @@ function Read-ImxBrand {
             OnLight = Resolve-ImxLogo $baseDir (Get-ImxValue $logos 'onLight' $null) 'onLight'
         }
         LogoHeight  = [pscustomobject]@{ Masthead = Get-ImxValue $heights 'masthead' $script:Defaults.MastheadLogo; Login = Get-ImxValue $heights 'login' $script:Defaults.LoginLogo }
-        Layout      = [pscustomobject]@{ LightMasthead = Get-ImxValue $layout 'lightMasthead' 'brand'; DarkMasthead = Get-ImxValue $layout 'darkMasthead' 'surface-with-line' }
+        Layout      = [pscustomobject]@{ LightMasthead = $lightMasthead; DarkMasthead = Get-ImxValue $layout 'darkMasthead' 'surface-with-line' }
         DeviceTheme = Get-ImxValue $json 'deviceTheme' 'brand'
         Notes       = @(Get-ImxValue $json 'notes' @())
         Warnings    = $warnings.ToArray()

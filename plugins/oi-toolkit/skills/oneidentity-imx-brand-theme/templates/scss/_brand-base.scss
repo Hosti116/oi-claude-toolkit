@@ -1,0 +1,25 @@
+// Shared base of the brand themes: module list and typography of the upstream template ../custom-theme.scss
+// (compare after each upgrade).
+
+@use '@angular/material' as mat;
+@use '@elemental-ui/core/src/styles/reset' as reset;
+@use '@elemental-ui/core/src/styles/billboard' as billboard;
+// Not included, unlike the template: cadence, material_icons and source_sans_pro. They only emit @font-face rules
+// (with paths relative to the theme CSS, where the font files do not exist: 503 on the API Server) and icon classes
+// that the web applications already ship in their global styles (same @elemental-ui/core version).
+@use '@elemental-ui/core/src/styles/palette' as palette;
+@use '@elemental-ui/core/src/styles/typography' as typography;
+@use '@elemental-ui/core/src/styles/material_fixes' as material_fixes;
+@use '@elemental-ui/core/src/styles/inputs' as inputs;
+@use '@elemental-ui/core/src/styles/clickables' as clickables;
+@use '@elemental-ui/core/src/styles/common' as common;
+
+// Brand books rarely define a web font: keep the product font.
+$font-family: 'Source Sans Pro, "Helvetica Neue", sans-serif';
+
+$typography: mat.m2-define-typography-config(
+  $font-family: $font-family,
+  $button: mat.m2-define-typography-level(14px, 14px, 400),
+);
+
+@include mat.core();

@@ -1,0 +1,74 @@
+// Light brand theme (class palette.$light-class). Masthead and login page in the brand color with the logo for
+// colored backgrounds (layout.lightMasthead = brand), or a light masthead with the logo for light backgrounds.
+
+@use '@angular/material' as mat;
+@use '../../shared/scss/base/theme' as imx-theme;
+@use 'brand-scoped-theme' as scoped;
+@use 'brand-base' as base;
+@use 'brand-palette' as palette;
+@use 'brand-logos' as logos;
+@use 'brand-branding' as branding;
+
+$theme-name: palette.$light-class;
+
+$primary: mat.m2-define-palette(palette.$primary-palette, 500, 300, 700);
+$accent: mat.m2-define-palette(palette.$neutral-palette, 700, 400, 900);
+$warn: mat.m2-define-palette(palette.$warn-palette, 500, 300, 700);
+
+$theme: mat.m2-define-light-theme(
+  (
+    color: (
+      primary: $primary,
+      accent: $accent,
+      warn: $warn,
+    ),
+    typography: base.$typography,
+  )
+);
+
+// Not theme.theme(): see _brand-scoped-theme.scss.
+@include scoped.theme($theme-name, $theme);
+@include imx-theme.theme($theme-name, $theme);
+
+@include branding.contract-root(palette.$light-class, palette.$dark-class, palette.$device-theme);
+
+:where(body.#{$theme-name}) {
+  @include branding.contract-map('map', palette.$map-base);
+}
+
+body.#{$theme-name} {
+  @if palette.$light-masthead == 'light' {
+    // Light masthead with a brand bottom line (layout.lightMasthead = light).
+    eui-masthead header.eui-masthead {
+      background-color: #ffffff;
+      color: palette.$dark-primary-text;
+      border-bottom: 3px solid palette.$brand-primary;
+
+      .mat-toolbar.mat-primary {
+        --mat-toolbar-container-background-color: transparent;
+        --mat-toolbar-container-text-color: #{palette.$dark-primary-text};
+        background: transparent;
+        color: palette.$dark-primary-text;
+      }
+    }
+
+    @include branding.masthead-logo(logos.$logo-on-light, logos.$logo-on-light-ratio, palette.$masthead-logo-height);
+  } @else {
+    @include branding.masthead-logo(logos.$logo-on-brand, logos.$logo-on-brand-ratio, palette.$masthead-logo-height);
+  }
+
+  @include branding.login-logo(logos.$logo-on-brand, logos.$logo-on-brand-ratio, palette.$login-logo-height);
+
+  // imx-theme.theme() (login-theme mixin, shared/scss/base/theme.scss) gives .imx-loginPage the primary
+  // contrast color (white) and the card header the 800 hue with lighter-contrast (dark) text. The card does
+  // not set its own text color, so labels and the username turned white on white. Same result as the
+  // standard light theme: dark text in the card, light text on the dark header.
+  .imx-loginPage .imx-card {
+    color: palette.$dark-primary-text;
+  }
+
+  .imx-loginPage .imx-card-header,
+  .imx-loginPage .imx-card-header eui-icon {
+    color: palette.$light-primary-text;
+  }
+}

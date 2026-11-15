@@ -23,6 +23,24 @@
       "additionalProperties": false,
       "properties": {
         "primary": { "$ref": "#/$defs/hex", "description": "Brand color from the brand book (hue 500)." },
+        "palette": {
+          "description": "Optional explicit primary palette (when the brand book defines its tints). All ten hues, 500 = primary.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"],
+          "properties": {
+            "50": { "$ref": "#/$defs/hex" }, "100": { "$ref": "#/$defs/hex" }, "200": { "$ref": "#/$defs/hex" },
+            "300": { "$ref": "#/$defs/hex" }, "400": { "$ref": "#/$defs/hex" }, "500": { "$ref": "#/$defs/hex" },
+            "600": { "$ref": "#/$defs/hex" }, "700": { "$ref": "#/$defs/hex" }, "800": { "$ref": "#/$defs/hex" },
+            "900": { "$ref": "#/$defs/hex" }
+          }
+        },
+        "paletteContrast": {
+          "description": "Optional text color per hue of the primary palette (light = white text, dark = dark text). Default: computed.",
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": { "^(50|[1-9]00)$": { "enum": ["light", "dark"] } }
+        },
         "accentNeutral": { "$ref": "#/$defs/hex", "description": "Neutral for light tints and the Material accent. Default: anthracite #5f666d." },
         "warn": { "$ref": "#/$defs/hex", "description": "Warnings and errors. Default: amber #b45309." },
         "dark": {

@@ -1,0 +1,28 @@
+// Theme mixin of the brand themes, scoped to the theme class.
+//
+// Same content as theme.theme() of @elemental-ui/core (src/styles/theming/_theme.scss), which the official
+// template ../custom-theme.scss uses. That mixin calls mat.all-component-themes(),
+// mat.color-variants-backwards-compatibility() and mat.typography-hierarchy() OUTSIDE body.<theme>, so their
+// tokens land on "html" and on unscoped selectors. The portal loads the CSS of every custom theme at start
+// (qbm CustomThemeService.loadThemes): without the scope, the file loaded last would recolor every theme, the
+// standard ones included. Compare with ElementalUI theme() after each upgrade.
+
+@use '@angular/material' as mat;
+@use '@elemental-ui/core/src/styles/theming/theme' as theme;
+
+@mixin theme($theme-name, $theme) {
+  // ElementalUI component colors: already scoped to body.<theme> by ElementalUI.
+  @include theme.color($theme-name, $theme);
+
+  // Inside a selector Material emits its tokens on that selector instead of html.
+  // :where() scopes to the theme class without adding specificity: Material rules keep losing to the
+  // portal's global rules exactly as upstream (with body.<theme> they win, e.g. icon buttons lose their color).
+  :where(body.#{$theme-name}) {
+    @include mat.all-component-themes($theme);
+    @include mat.color-variants-backwards-compatibility($theme);
+    @include mat.typography-hierarchy($theme, $back-compat: true);
+  }
+
+  // ElementalUI typography: already scoped to .<theme> by ElementalUI.
+  @include theme.typography($theme-name, $theme);
+}
