@@ -52,6 +52,7 @@ $theme: mat.m2-define-dark-theme(
 }
 
 $masthead-border-width: 3px;
+$masthead-text: if(palette.$dark-masthead == 'brand', palette.$on-primary, palette.$on-surface-dark);
 
 body.#{$theme-name} {
   // Selector must beat ".eui-dark-theme eui-masthead header.eui-masthead" (0,2,2), active once the ccc
@@ -68,13 +69,13 @@ body.#{$theme-name} {
 
     .mat-toolbar.mat-primary {
       --mat-toolbar-container-background-color: transparent;
-      --mat-toolbar-container-text-color: #{palette.$on-surface-dark};
+      --mat-toolbar-container-text-color: #{$masthead-text};
       background: transparent;
-      color: palette.$on-surface-dark;
+      color: $masthead-text;
     }
 
     .mat-mdc-button.mat-unthemed {
-      color: palette.$on-surface-dark;
+      color: $masthead-text;
     }
   }
 

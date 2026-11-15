@@ -76,6 +76,8 @@ Assert-True ($fixed.Colors.Palette['700'] -eq '#c11723' -and $fixed.Colors.Palet
 Assert-True (Test-ImxThrows { Read-ImxBrand (New-TestBrand @{ 'colors.palette' = @{ '500' = '#eb212e' } } 'partial-palette') }) 'partial palette is rejected'
 Assert-True ($brand.Colors.NeutralPalette['800'] -eq '#2e3236' -and $brand.Colors.WarnPalette['300'] -eq '#ffbd66') 'default neutral and warn palettes'
 Assert-True (Test-ImxThrows { Read-ImxBrand (New-TestBrand @{ 'layout' = @{ lightMasthead = 'light' } } 'light-without-logo') }) 'light masthead requires logos.onLight'
+$pale = Read-ImxBrand (New-TestBrand @{ 'colors.primary' = '#fff3b0' } 'pale-primary')
+Assert-True ((($pale.Warnings -join ' ') -match 'dark.fill') -and (Get-ImxContrast $pale.Colors.OnDarkFill $pale.Colors.DarkFill) -ge 4.5) 'computed dark fill below 7:1 warns and keeps readable fill text'
 #endregion
 
 #region Theme generator (Task 3)
@@ -103,6 +105,10 @@ $config = Get-Content (Join-Path $brandDir 'imx-theme-config.json') -Raw | Conve
 Assert-True ($config.Themes.Count -eq 2 -and $config.Themes[1].Urls[0] -eq '../qer-app-portal/acme/acme-dark-theme.css' -and $config.Themes[0].DisplayName -eq 'Acme chiaro') 'imx-theme-config.json'
 Assert-True ($out.manualChecks -contains 'CompanyLogoUrl empty') 'manual check reported'
 Assert-True (@((Invoke-Gen $genBrand $tmpImx).written).Count -eq 0) 'idempotent'
+$crlfFile = Join-Path $themeDir 'acme-light.scss'
+[IO.File]::WriteAllText($crlfFile, ([IO.File]::ReadAllText($crlfFile) -replace "`r?`n", "`r`n"))
+$afterCheckout = Invoke-Gen $genBrand $tmpImx
+Assert-True ($afterCheckout.status -eq 'ok' -and @($afterCheckout.blocked).Count -eq 0) 'CRLF checkout of a generated file is not a hand edit'
 Add-Content (Join-Path $themeDir 'acme-dark.scss') '// local edit'
 $blocked = Invoke-Gen $genBrand $tmpImx
 Assert-True ($blocked.status -eq 'blocked' -and ($blocked.blocked -join ' ') -match 'acme-dark.scss') 'stops on edited generated file'
@@ -160,6 +166,13 @@ $imxC = Join-Path $tmp 'install-c'
 New-Item -ItemType Directory -Force (Join-Path $imxC 'projects') | Out-Null
 $resC = & $install -ImxWebDir $imxC | Select-Object -Last 1 | ConvertFrom-Json
 Assert-True ($resC.status -eq 'needs-ccc' -and -not (Test-Path (Join-Path $imxC 'projects/ccc'))) 'no ccc: needs-ccc, nothing written'
+
+$bodyInit = $plainInit.Replace('constructor(private readonly extService: ExtService) {}', 'constructor(private readonly extService: ExtService) { this.ready = true; }').Replace('  public onInit(): void {', "  private ready = false;`n`n  public tryLoad(): void {`n    try { this.ready = true; } catch (e) {}`n  }`n`n  public onInit(): void {")
+$imxD = Join-Path $tmp 'install-d'
+$libD = New-TestCcc $imxD $bodyInit
+$beforeD = Get-Content (Join-Path $libD 'init.service.ts') -Raw
+$resD = & $install -ImxWebDir $imxD | Select-Object -Last 1 | ConvertFrom-Json
+Assert-True ($resD.status -eq 'blocked' -and (Get-Content (Join-Path $libD 'init.service.ts') -Raw) -eq $beforeD) 'constructor with a body: stops, InitService untouched'
 #endregion
 
 #region Theme build (Task 4, integration)
@@ -185,6 +198,24 @@ if ($ImxWebDir) {
         } finally { Pop-Location }
         $darkCss = Get-Content (Join-Path $buildOut 'kittest/kittest-dark-theme.css') -Raw
         Assert-True ($darkCss -match '--ccc-brand-dark-fill:\s*#[0-9a-f]{6}[;}]' -and $darkCss -match '--ccc-brand-light-class:\s*kittest-light-theme[;}]') 'contract values in the css (#rrggbb, class names)'
+        # Light primary with the brand-colored dark masthead: text on the masthead and the login card header readable.
+        $sunDir = Join-Path $tmp 'brand/kitsun'
+        New-Item -ItemType Directory -Force $sunDir | Out-Null
+        Copy-Item (Join-Path $kit 'examples/acme/*.png') $sunDir
+        $sunBrand = New-TestBrand @{ 'id' = 'kitsun'; 'colors.primary' = '#ffd200'; 'layout' = @{ darkMasthead = 'brand' } } 'kitsun-brand'
+        Move-Item $sunBrand (Join-Path $sunDir 'brand.json') -Force
+        (Get-Content (Join-Path $sunDir 'brand.json') -Raw).Replace('"$schema": "../../brand.schema.json",', '') | Set-Content (Join-Path $sunDir 'brand.json') -Encoding utf8NoBOM
+        try {
+            $null = Invoke-Gen (Join-Path $sunDir 'brand.json') $ImxWebDir
+            $sunRes = & $build -Id kitsun -ImxWebDir $ImxWebDir -OutDir $buildOut | Select-Object -Last 1 | ConvertFrom-Json
+            $colorsOf = { param($css, $selector)
+                @(node -e "const p=require(require('module').createRequire(process.argv[3]+'/package.json').resolve('postcss'));p.parse(require('fs').readFileSync(process.argv[1],'utf8')).walkRules(r=>{if(r.selectors.some(x=>x.trim().endsWith(process.argv[2])))r.walkDecls('color',d=>console.log(d.value))})" $css $selector $ImxWebDir) }
+            $mastheadText = @(& $colorsOf (Join-Path $buildOut 'kitsun/kitsun-dark-theme.css') 'header.eui-masthead .mat-toolbar.mat-primary')
+            $headerText = @(& $colorsOf (Join-Path $buildOut 'kitsun/kitsun-light-theme.css') '.imx-loginPage .imx-card-header')
+            $sun = Read-ImxBrand (Join-Path $sunDir 'brand.json')
+            Assert-True ($sunRes.status -eq 'ok' -and $mastheadText.Count -gt 0 -and @($mastheadText | Where-Object { $_ -match '^#([0-9a-f]{3}){1,2}$' -and (Get-ImxContrast ($_ -replace '^#(.)(.)(.)$', '#$1$1$2$2$3$3') $sun.Colors.Primary) -ge 4.5 }).Count -eq $mastheadText.Count) 'light primary: dark brand masthead text readable'
+            Assert-True ($headerText.Count -gt 0 -and @($headerText | Where-Object { $_ -match 'white|#fff' }).Count -eq 0) 'light primary: login card header text not white'
+        } finally { Remove-Item -LiteralPath (Join-Path $ImxWebDir 'custom-theme/kitsun') -Recurse -Force -ErrorAction SilentlyContinue }
         # Deploy package (Task 7): fake portal build, with and without the plugin in the bundle.
         $package = Join-Path $kit 'scripts/New-ImxBrandDeployPackage.ps1'
         $fakeDist = Join-Path $tmp 'dist-portal'

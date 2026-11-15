@@ -159,6 +159,7 @@ function New-ImxPalettePartial($B) {
         '$light-primary-text: white;'
         "`$brand-primary: $($c.Primary);"
         "`$on-primary: $($c.OnPrimary);"
+        "`$on-login-header: $(if ((Get-ImxContrast '#ffffff' $c.Palette['800']) -ge 4.5 -or (Get-ImxContrast '#ffffff' $c.Palette['800']) -ge (Get-ImxContrast '#000000' $c.Palette['800'])) { '$light-primary-text' } else { '$dark-primary-text' });"
         '$surface-dark: #1e1e1e;'
         '$on-surface-dark: #f2f2f2;'
         "`$dark-accent: $($c.DarkAccent);"
@@ -239,6 +240,8 @@ $targets = [ordered]@{
     "custom-theme/$($b.Id)/$($b.Id)-dark.scss"        = & $static 'brand-dark.scss'
     'brand-config/imx-theme-config.json'              = New-ImxThemeConfig $b
 }
+# Generated files are always LF (templates from a CRLF checkout, ConvertTo-Json on Windows).
+foreach ($rel in @($targets.Keys)) { $targets[$rel] = $targets[$rel] -replace "`r`n", "`n" }
 $resolve = { param($rel) if ($rel -like 'brand-config/*') { Join-Path $b.SourceDir (Split-Path -Leaf $rel) } else { Join-Path $imxWeb $rel } }
 
 $recordPath = Join-Path $themeDir '.generated.json'
@@ -249,7 +252,8 @@ foreach ($rel in $targets.Keys) {
     $path = & $resolve $rel
     $content = $targets[$rel]
     if (Test-Path -LiteralPath $path) {
-        $current = Get-Content -LiteralPath $path -Raw
+        # Line endings do not count: a git checkout with core.autocrlf turns the generated LF files into CRLF.
+        $current = (Get-Content -LiteralPath $path -Raw) -replace "`r`n", "`n"
         if ($current -eq $content) { $unchanged.Add($rel); continue }
         if (-not $record.ContainsKey($rel) -or $record[$rel] -ne (Get-ImxHash $current)) { $blocked.Add($rel); continue }
     }

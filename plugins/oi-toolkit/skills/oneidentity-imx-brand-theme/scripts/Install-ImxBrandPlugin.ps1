@@ -77,7 +77,8 @@ if (-not $newInit.Contains($importLine)) {
     $newInit = $newInit.Insert($lastImport.Index + $lastImport.Length, "`n$importLine")
 }
 if ($newInit -notmatch 'brandTheme:\s*BrandThemeService') {
-    $ctor = [regex]::Match($newInit, 'constructor\(([\s\S]*?)\)\s*\{\s*\}')
+    # Parameters only (no braces) and an empty body: a constructor with a body is left to the operator.
+    $ctor = [regex]::Match($newInit, 'constructor\(([^{}]*?)\)\s*\{\s*\}')
     if (-not $ctor.Success) { $actions.Add('init.service.ts: constructor not in the form constructor(...) {}; add the BrandThemeService parameter by hand.'); Write-Result 'blocked'; return }
     $params = $ctor.Groups[1].Value.Trim().TrimEnd(',')
     $replacement = "constructor(`n    $(($params -split ',\s*' | Where-Object { $_ }) -join ",`n    "),`n    private readonly brandTheme: BrandThemeService,`n  ) {}"

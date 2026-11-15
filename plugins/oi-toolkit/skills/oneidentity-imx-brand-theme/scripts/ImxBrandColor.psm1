@@ -161,18 +161,19 @@ function Read-ImxBrand {
     $warnSet = Get-ImxSecondaryPalette $warn $script:Defaults.Warn $script:AmberPalette $script:AmberContrast
     $neutralSet = Get-ImxSecondaryPalette $neutral $script:Defaults.Neutral $script:AnthracitePalette $script:AnthraciteContrast
 
+    # Overrides and computed values get the same checks: a light primary can leave no hue that qualifies.
     $accent = Get-ImxValue $dark 'accent' $null
-    if ($accent) {
-        $accent = $accent.ToLowerInvariant()
-        if ((Get-ImxContrast $accent $script:DarkCard) -lt $script:MinAccentOnCard -or (Get-ImxContrast $accent $script:DarkPage) -lt $script:MinAccentOnPage) {
-            $warnings.Add("colors.dark.accent $accent is below $($script:MinAccentOnCard):1 on cards or $($script:MinAccentOnPage):1 on the page.")
-        }
-    } else { $accent = Select-ImxDarkAccent $palette }
+    $accent = if ($accent) { $accent.ToLowerInvariant() } else { Select-ImxDarkAccent $palette }
+    if ((Get-ImxContrast $accent $script:DarkCard) -lt $script:MinAccentOnCard -or (Get-ImxContrast $accent $script:DarkPage) -lt $script:MinAccentOnPage) {
+        $warnings.Add("colors.dark.accent $accent is below $($script:MinAccentOnCard):1 on cards or $($script:MinAccentOnPage):1 on the page.")
+    }
     $fill = Get-ImxValue $dark 'fill' $null
-    if ($fill) {
-        $fill = $fill.ToLowerInvariant()
-        if ((Get-ImxContrast '#ffffff' $fill) -lt $script:MinWhiteOnFill) { $warnings.Add("colors.dark.fill $fill carries white text below $($script:MinWhiteOnFill):1.") }
-    } else { $fill = Select-ImxDarkFill $palette $primary }
+    $fill = if ($fill) { $fill.ToLowerInvariant() } else { Select-ImxDarkFill $palette $primary }
+    $onFill = '#ffffff'
+    if ((Get-ImxContrast '#ffffff' $fill) -lt $script:MinWhiteOnFill) {
+        if ((Get-ImxContrast '#ffffff' $fill) -lt 4.5 -and (Get-ImxContrast '#000000' $fill) -gt (Get-ImxContrast '#ffffff' $fill)) { $onFill = '#000000' }
+        $warnings.Add("colors.dark.fill $fill carries white text below $($script:MinWhiteOnFill):1 (fill text: $onFill).")
+    }
 
     $logos = $json.logos
     $layout = Get-ImxValue $json 'layout' @{}
@@ -198,7 +199,7 @@ function Read-ImxBrand {
             NeutralContrast = $neutralSet.Contrast
             DarkAccent      = $accent
             DarkFill   = $fill
-            OnDarkFill = '#ffffff'
+            OnDarkFill = $onFill
             OnPrimary  = Get-ImxOnColor $primary
         }
         Logos       = [pscustomobject]@{
