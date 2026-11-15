@@ -115,6 +115,53 @@ $custText = Get-Content $cust -Raw
 Assert-True ($custText -match 'acme-dark-theme' -and $custText -match 'keep' -and $custText -notmatch 'old') 'only the generated block is replaced'
 #endregion
 
+#region Plugin installer (Task 6)
+$install = Join-Path $kit 'scripts/Install-ImxBrandPlugin.ps1'
+function New-TestCcc([string] $Root, [string] $InitService) {
+    $lib = Join-Path $Root 'projects/ccc/src/lib'
+    New-Item -ItemType Directory -Force $lib | Out-Null
+    Set-Content (Join-Path $lib 'init.service.ts') $InitService -Encoding utf8NoBOM
+    return $lib
+}
+$plainInit = @'
+import { Injectable } from '@angular/core';
+import { ExtService } from 'qbm';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class InitService {
+  constructor(private readonly extService: ExtService) {}
+
+  public onInit(): void {
+    this.extService.register('Dashboard-SmallTiles', { instance: SomeTile });
+  }
+}
+'@
+$imxA = Join-Path $tmp 'install-a'
+$libA = New-TestCcc $imxA $plainInit
+$res = & $install -ImxWebDir $imxA | Select-Object -Last 1 | ConvertFrom-Json
+$initA = Get-Content (Join-Path $libA 'init.service.ts') -Raw
+Assert-True ($res.status -eq 'ok' -and (Test-Path (Join-Path $libA 'brand-theme/brand-theme.service.ts'))) 'plugin files installed'
+Assert-True ($initA -match "import \{ BrandThemeService \} from './brand-theme/brand-theme.service';" -and $initA -match 'private readonly brandTheme: BrandThemeService' -and $initA -match 'this\.brandTheme\.start\(\);') 'InitService registration inserted'
+Assert-True (($res.actions -join ' ') -match 'init.service.spec.ts') 'spec update reported'
+& $install -ImxWebDir $imxA | Out-Null
+Assert-True (([regex]::Matches((Get-Content (Join-Path $libA 'init.service.ts') -Raw), 'brandTheme\.start\(\)')).Count -eq 1) 'registration inserted once on reruns'
+Add-Content (Join-Path $libA 'brand-theme/brand-theme.service.ts') '// local edit'
+Assert-True ((& $install -ImxWebDir $imxA | Select-Object -Last 1 | ConvertFrom-Json).status -eq 'blocked') 'stops on edited template file'
+
+$legacyInit = $plainInit.Replace('constructor(private readonly extService: ExtService) {}', "constructor(`n    private readonly extService: ExtService,`n    private readonly legacyTheme: LegacyThemeService,`n  ) {}").Replace("{ instance: SomeTile });", "{ instance: SomeTile });`n    this.legacyTheme.start();")
+$imxB = Join-Path $tmp 'install-b'
+New-TestCcc $imxB $legacyInit | Out-Null
+$resB = & $install -ImxWebDir $imxB | Select-Object -Last 1 | ConvertFrom-Json
+Assert-True ($resB.status -eq 'ok' -and ($resB.actions -join ' ') -match 'LegacyThemeService') 'legacy theme service reported for manual removal'
+
+$imxC = Join-Path $tmp 'install-c'
+New-Item -ItemType Directory -Force (Join-Path $imxC 'projects') | Out-Null
+$resC = & $install -ImxWebDir $imxC | Select-Object -Last 1 | ConvertFrom-Json
+Assert-True ($resC.status -eq 'needs-ccc' -and -not (Test-Path (Join-Path $imxC 'projects/ccc'))) 'no ccc: needs-ccc, nothing written'
+#endregion
+
 #region Theme build (Task 4, integration)
 if ($ImxWebDir) {
     $build = Join-Path $kit 'scripts/Build-ImxBrandTheme.ps1'
