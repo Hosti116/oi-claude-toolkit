@@ -20,6 +20,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $MaxCssKb = 600
+# Resolve before Push-Location: sass runs inside imxweb, the checks run here.
+$OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
 $imxWeb = (Resolve-Path -LiteralPath $ImxWebDir).Path
 if (-not (Test-Path -LiteralPath (Join-Path $imxWeb 'node_modules/@angular/material'))) { throw "node_modules missing in ${imxWeb}: run 'npm install' there first." }
 $themeDir = Join-Path $imxWeb "custom-theme/$Id"

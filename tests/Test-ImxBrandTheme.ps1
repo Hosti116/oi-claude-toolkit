@@ -178,6 +178,11 @@ if ($ImxWebDir) {
         $res = & $build -Id kittest -ImxWebDir $ImxWebDir -OutDir $buildOut | Select-Object -Last 1 | ConvertFrom-Json
         Assert-True ($res.status -eq 'ok' -and $res.checks.scopeDiffs -eq 0 -and $res.checks.fontFaces -eq 0) 'build ok, scoped, no @font-face'
         Assert-True ((Test-Path (Join-Path $buildOut 'kittest/kittest-dark-theme.css')) -and @($res.checks.contractMissing).Count -eq 0) 'css written with the full contract'
+        Push-Location $tmp
+        try {
+            $relative = & $build -Id kittest -ImxWebDir $ImxWebDir -OutDir 'build-relative' | Select-Object -Last 1 | ConvertFrom-Json
+            Assert-True ($relative.status -eq 'ok' -and (Test-Path (Join-Path $tmp 'build-relative/kittest/kittest-light-theme.css'))) 'relative OutDir resolved from the current folder'
+        } finally { Pop-Location }
         $darkCss = Get-Content (Join-Path $buildOut 'kittest/kittest-dark-theme.css') -Raw
         Assert-True ($darkCss -match '--ccc-brand-dark-fill:\s*#[0-9a-f]{6}[;}]' -and $darkCss -match '--ccc-brand-light-class:\s*kittest-light-theme[;}]') 'contract values in the css (#rrggbb, class names)'
         # Deploy package (Task 7): fake portal build, with and without the plugin in the bundle.

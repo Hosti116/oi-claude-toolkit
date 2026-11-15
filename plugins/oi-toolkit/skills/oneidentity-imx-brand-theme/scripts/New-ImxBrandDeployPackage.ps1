@@ -40,9 +40,12 @@ $ErrorActionPreference = 'Stop'
 $PortalApp = 'qer-app-portal'
 $BundleMarker = '--ccc-brand-light-class'
 $problems = [Collections.Generic.List[string]]::new()
+# Resolve relative paths against the current PowerShell location (not the process folder) before any Push-Location.
+$StagingRoot = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($StagingRoot)
+$ApiServerImxWeb = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($ApiServerImxWeb)
 $imxWeb = (Resolve-Path -LiteralPath $ImxWebDir).Path
 $brandFull = (Resolve-Path -LiteralPath $BrandDir).Path
-if (-not $PortalDistDir) { $PortalDistDir = Join-Path $imxWeb "dist/$PortalApp" }
+if (-not $PortalDistDir) { $PortalDistDir = Join-Path $imxWeb "dist/$PortalApp" } else { $PortalDistDir = (Resolve-Path -LiteralPath $PortalDistDir).Path }
 
 function Write-Result([string] $Status, [string] $Staging, $Files) {
     [ordered]@{ status = $Status; staging = $Staging; files = @($Files); problems = $problems.ToArray() } | ConvertTo-Json -Compress -Depth 4
