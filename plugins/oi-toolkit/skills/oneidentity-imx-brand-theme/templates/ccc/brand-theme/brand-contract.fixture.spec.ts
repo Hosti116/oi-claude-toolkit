@@ -2,7 +2,7 @@
 import { ColorMap, OI_SHADES } from './brand-ootb-colors';
 import { BrandColorMaps } from './brand-theme-config';
 
-/** Test fixture: the CSS contract a generated brand theme declares (values of the first kit customer). */
+/** Test fixture: the CSS contract a generated brand theme declares (values of the first theme built with the kit). */
 export const FIXTURE_LIGHT = 'acme-light-theme';
 export const FIXTURE_DARK = 'acme-dark-theme';
 

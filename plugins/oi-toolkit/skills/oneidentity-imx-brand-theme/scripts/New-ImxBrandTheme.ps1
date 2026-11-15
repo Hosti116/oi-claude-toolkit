@@ -1,7 +1,7 @@
 #Requires -Version 7.6
 <#
 .SYNOPSIS
-    Generates the light and dark Web Portal brand themes of a customer from its brand.json.
+    Generates the light and dark Web Portal brand themes of an organization from its brand.json.
 .DESCRIPTION
     Writes imxweb/custom-theme/<id>/ (static templates of the kit, the palette partial and the logo partial) and
     imx-theme-config.json next to brand.json. Every generated file is recorded with its hash in

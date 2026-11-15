@@ -42,5 +42,5 @@ screenshot, for the brand light and dark themes; the operator logs in again. Nev
 - Restore the operator's starting theme choice in "User interface settings" (if the agent changed it).
 - Report: one table pages × themes with ok / anomaly, then only the anomalies in detail
   (`oobColors`, `lowContrast` entries with the element, screenshot path). A new kind of anomaly is a new rule for the
-  kit: stop and describe it instead of patching the customer's theme by hand.
-- Not checkable in a lab without computed statistics: chart colors.
+  kit: stop and describe it instead of patching the generated theme by hand.
+- Not checkable without computed statistics in the environment: chart colors.

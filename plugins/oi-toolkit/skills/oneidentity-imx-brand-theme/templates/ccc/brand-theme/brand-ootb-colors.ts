@@ -2,7 +2,7 @@
 /**
  * Fixed One Identity palette ($color-blue-*, $color-orange-* of @elemental-ui/core) that upstream styles use
  * instead of the theme palette. BrandThemeService replaces these colors with the brand ones.
- * Template of the oi-toolkit kit (skill oneidentity-imx-brand-theme): identical for every customer.
+ * Template of the oi-toolkit kit (skill oneidentity-imx-brand-theme): identical for every brand.
  */
 
 export const OI_SHADES = [

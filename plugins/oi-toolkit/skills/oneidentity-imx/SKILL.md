@@ -11,6 +11,8 @@ description: Use for any development or customization of the One Identity Manage
 - Official step-by-step samples: `oim/webportal/imx/sdk_samples/` (dashboard tile, menu item, data tables).
 - Read before guessing: `imxweb/projects/<lib>/readme.md`, `imxweb/custom-theme/readme.md`,
   `imxweb/projects/qbm/src/lib/cdr/Readme.md`, `UPGRADE.md`, `imxweb/changes/`.
+- Organization brand themes (light/dark, logo, no One Identity colors): skill `oneidentity-imx-brand-theme`, not the
+  official `custom-theme` procedure alone (its theme ZIPs are not served by the API Server 10.0, its tokens leak).
 
 ## Version pinning (critical)
 - Read the installed version from `## Ambiente` of CLAUDE.md. Identity Manager **10.0 LTS** → branch `v100`, **Angular 20**, **Node 22.x** (what upstream CI uses).

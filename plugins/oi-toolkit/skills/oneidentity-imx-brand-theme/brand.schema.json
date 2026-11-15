@@ -77,7 +77,7 @@
       }
     },
     "deviceTheme": { "enum": ["brand", "standard"], "description": "brand: Device theme uses the brand themes." },
-    "notes": { "type": "array", "items": { "type": "string" }, "description": "Deviations from the brand book agreed with the customer." }
+    "notes": { "type": "array", "items": { "type": "string" }, "description": "Deviations from the brand book agreed with the brand owner." }
   },
   "$defs": { "hex": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" } }
 }

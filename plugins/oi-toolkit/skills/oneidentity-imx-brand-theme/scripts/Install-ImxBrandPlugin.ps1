@@ -108,9 +108,9 @@ if ($newInit -ne $init) {
     $written.Add('init.service.ts')
     $actions.Add('Update init.service.spec.ts: InitService now takes a BrandThemeService (pass a jasmine spy object with start()).')
 }
-if ($newInit -match 'LegacyThemeService|ThemeService(?<!BrandThemeService)\b' -and $newInit -match 'class InitService') {
-    $legacy = [regex]::Matches($newInit, '\b(\w+ThemeService)\b') | ForEach-Object { $_.Value } | Where-Object { $_ -ne 'BrandThemeService' } | Select-Object -Unique
-    foreach ($name in $legacy) { $actions.Add("init.service.ts still uses ${name}: remove it by hand (replaced by BrandThemeService), with its files and spec.") }
-}
+# Earlier, hand-written theme services (any *ThemeService other than BrandThemeService and ElementalUI's EuiThemeService).
+$legacy = [regex]::Matches($newInit, '\b(\w+ThemeService)\b') | ForEach-Object { $_.Value } |
+    Where-Object { $_ -notin 'BrandThemeService', 'EuiThemeService' } | Select-Object -Unique
+foreach ($name in $legacy) { $actions.Add("init.service.ts still uses ${name}: remove it by hand (replaced by BrandThemeService), with its files and spec.") }
 Write-Result 'ok'
 #endregion

@@ -4,7 +4,7 @@ import { BrandColorMaps } from './brand-theme-config';
 
 /**
  * CCC: recolors CSS declarations that use One Identity palette colors with the brand colors.
- * Template of the oi-toolkit kit (skill oneidentity-imx-brand-theme): identical for every customer.
+ * Template of the oi-toolkit kit (skill oneidentity-imx-brand-theme): identical for every brand.
  *
  * The declarations are changed in place, inside their own rule: the rule keeps its position and
  * specificity, so the cascade stays as upstream wrote it (a copy appended later would also win

@@ -9,7 +9,8 @@ Plugin Claude Code e file di progetto per i workspace One Identity Manager e Saf
 | `project-files/` | File copiati nel workspace: regole, tool, modelli di documentazione, settings di base, connettori |
 | `New-OiWorkspace.ps1` | Crea un workspace; il tipo predefinito è `PRODUZIONE` |
 | `Update-OiWorkspace.ps1` | Aggiorna un workspace; i file modificati in locale restano e vengono segnalati |
-| `tests/` | `Verify-OiWorkspace.ps1`, `Test-OiToolkit.ps1`, `Invoke-OiLeakScan.ps1` |
+| `tests/` | `Verify-OiWorkspace.ps1`, `Test-OiToolkit.ps1`, `Invoke-OiLeakScan.ps1`, `Test-ImxBrandTheme.ps1` |
+| `plugins/oi-toolkit/skills/oneidentity-imx-brand-theme/` | Kit dei temi di brand del Web Portal (chiaro/scuro da `brand.json`), agente `imx-brand-theme-builder` |
 
 ## Nuovo workspace
 

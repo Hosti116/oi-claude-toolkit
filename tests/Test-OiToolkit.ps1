@@ -70,5 +70,9 @@ foreach ($line in ($notice -split '\r?\n' | Where-Object { $_ -match '^- ' })) {
     Assert-True (Test-Path -LiteralPath (Join-Path $toolkit $path)) "NOTICE entry exists: $path"
 }
 
+# Brand theme kit: unit tests (the integration part needs an imxweb with node_modules: run it with -ImxWebDir)
+& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'Test-ImxBrandTheme.ps1') | Out-Host
+Assert-True ($LASTEXITCODE -eq 0) 'brand theme kit tests'
+
 if ($script:failures) { Write-Host "$script:failures check(s) FAILED"; exit 1 }
 Write-Host 'All toolkit checks passed.'

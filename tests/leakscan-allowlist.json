@@ -4,6 +4,7 @@
   {"path": "plugins/oi-toolkit/*", "pattern": "settings[.]local", "reason": "Claude Code settings file name, not a host"},
   {"path": "project-files/oi-shared.md", "pattern": "Tipo: LAB", "reason": "environment type value in the production rule"},
   {"path": "plugins/oi-toolkit/skills/*", "pattern": "Tipo: LAB", "reason": "environment type value in the production gate"},
+  {"path": "plugins/oi-toolkit/agents/imx-brand-theme-builder.md", "pattern": "Not LAB/TEST/DEMO", "reason": "environment type values in the production gate"},
   {"path": "New-OiWorkspace.ps1", "pattern": "'LAB'", "reason": "allowed value of -EnvironmentType"},
   {"path": "tests/*", "pattern": "([$]lab|EnvironmentType LAB|Tipo: LAB|'LAB')", "reason": "variable and value used by the tests"},
   {"path": "plugins/oi-toolkit/agents/code-reviewer.md", "pattern": "sk-abc123", "reason": "ECC example of a bad practice, fake value"},
