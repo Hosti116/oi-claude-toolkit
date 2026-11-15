@@ -49,7 +49,9 @@ function New-TestBrand([hashtable] $Changes, [string] $Name) {
     $json = Get-Content -LiteralPath $acme -Raw | ConvertFrom-Json -AsHashtable
     foreach ($key in $Changes.Keys) {
         $target = $json; $parts = $key -split '\.'
-        foreach ($p in $parts[0..($parts.Count - 2)]) { if (-not $target.ContainsKey($p)) { $target[$p] = @{} }; $target = $target[$p] }
+        if ($parts.Count -gt 1) {
+            foreach ($p in $parts[0..($parts.Count - 2)]) { if (-not $target.ContainsKey($p)) { $target[$p] = @{} }; $target = $target[$p] }
+        }
         if ($null -eq $Changes[$key]) { $target.Remove($parts[-1]) } else { $target[$parts[-1]] = $Changes[$key] }
     }
     $path = Join-Path $tmp "$Name.json"
@@ -111,6 +113,35 @@ Set-Content $cust "# x`n<!-- oi-brand-theme:acme:begin -->`nold`n<!-- oi-brand-t
 Invoke-Gen $genBrand $tmpImx2 $cust | Out-Null
 $custText = Get-Content $cust -Raw
 Assert-True ($custText -match 'acme-dark-theme' -and $custText -match 'keep' -and $custText -notmatch 'old') 'only the generated block is replaced'
+#endregion
+
+#region Theme build (Task 4, integration)
+if ($ImxWebDir) {
+    $build = Join-Path $kit 'scripts/Build-ImxBrandTheme.ps1'
+    $kitBrandDir = Join-Path $tmp 'brand/kittest'
+    New-Item -ItemType Directory -Force $kitBrandDir | Out-Null
+    Copy-Item (Join-Path $kit 'examples/acme/*.png') $kitBrandDir
+    $kitBrand = New-TestBrand @{ 'id' = 'kittest' } 'kittest-brand'
+    Move-Item $kitBrand (Join-Path $kitBrandDir 'brand.json') -Force
+    (Get-Content (Join-Path $kitBrandDir 'brand.json') -Raw).Replace('"$schema": "../../brand.schema.json",', '') | Set-Content (Join-Path $kitBrandDir 'brand.json') -Encoding utf8NoBOM
+    $kitThemeDir = Join-Path $ImxWebDir 'custom-theme/kittest'
+    $buildOut = Join-Path $tmp 'build'
+    try {
+        Assert-True ((Invoke-Gen (Join-Path $kitBrandDir 'brand.json') $ImxWebDir).status -eq 'ok') 'build fixture generated'
+        $res = & $build -Id kittest -ImxWebDir $ImxWebDir -OutDir $buildOut | Select-Object -Last 1 | ConvertFrom-Json
+        Assert-True ($res.status -eq 'ok' -and $res.checks.scopeDiffs -eq 0 -and $res.checks.fontFaces -eq 0) 'build ok, scoped, no @font-face'
+        Assert-True ((Test-Path (Join-Path $buildOut 'kittest/kittest-dark-theme.css')) -and @($res.checks.contractMissing).Count -eq 0) 'css written with the full contract'
+        $darkCss = Get-Content (Join-Path $buildOut 'kittest/kittest-dark-theme.css') -Raw
+        Assert-True ($darkCss -match '--ccc-brand-dark-fill:\s*#[0-9a-f]{6}[;}]' -and $darkCss -match '--ccc-brand-light-class:\s*kittest-light-theme[;}]') 'contract values in the css (#rrggbb, class names)'
+        Add-Content (Join-Path $kitThemeDir 'kittest-dark.scss') 'html { --mat-app-text-color: red; }'
+        $bad = & $build -Id kittest -ImxWebDir $ImxWebDir -OutDir $buildOut | Select-Object -Last 1 | ConvertFrom-Json
+        Assert-True ($bad.status -eq 'blocked' -and $bad.checks.scopeDiffs -ge 1) 'unscoped declaration blocks the build'
+    } finally {
+        Remove-Item -LiteralPath $kitThemeDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+} else {
+    Write-Host 'skip theme build tests (no -ImxWebDir)'
+}
 #endregion
 
 Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
